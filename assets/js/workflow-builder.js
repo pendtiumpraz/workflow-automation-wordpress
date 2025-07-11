@@ -116,6 +116,12 @@
                     ui.helper.css('z-index', 10000);
                 }
             });
+            
+            // Initialize all categories as expanded by default
+            $('.wa-category-title').each(function() {
+                $(this).addClass('expanded');
+                $(this).next('.wa-category-nodes').show();
+            });
         },
 
         initializeCanvas: function() {
@@ -772,7 +778,10 @@
 
     // Initialize on document ready
     $(document).ready(function() {
-        WorkflowBuilder.init();
+        // Only initialize if we're on the workflow builder page
+        if ($('#wa-workflow-canvas').length > 0) {
+            WorkflowBuilder.init();
+        }
     });
 
 })(jQuery);

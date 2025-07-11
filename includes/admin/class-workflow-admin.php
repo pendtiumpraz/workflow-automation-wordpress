@@ -60,10 +60,19 @@ class Workflow_Admin {
         
         // Only load on our plugin pages
         if (strpos($screen->id, 'workflow-automation') !== false) {
+            // Load modern admin CSS first
+            wp_enqueue_style(
+                $this->plugin_name . '-modern-admin',
+                WA_PLUGIN_URL . 'assets/css/modern-admin.css',
+                array(),
+                $this->version,
+                'all'
+            );
+            
             wp_enqueue_style(
                 $this->plugin_name . '-admin',
                 WA_PLUGIN_URL . 'assets/css/workflow-admin.css',
-                array(),
+                array($this->plugin_name . '-modern-admin'),
                 $this->version,
                 'all'
             );
@@ -82,7 +91,7 @@ class Workflow_Admin {
                 wp_enqueue_style(
                     $this->plugin_name . '-builder',
                     WA_PLUGIN_URL . 'assets/css/workflow-builder.css',
-                    array(),
+                    array($this->plugin_name . '-modern-admin'),
                     $this->version,
                     'all'
                 );
@@ -132,15 +141,15 @@ class Workflow_Admin {
             
             // Enqueue workflow builder scripts if on builder page
             if (strpos($screen->id, 'workflow-builder') !== false) {
-                // React and dependencies
-                wp_enqueue_script('react');
-                wp_enqueue_script('react-dom');
+                // jQuery UI for drag and drop
+                wp_enqueue_script('jquery-ui-draggable');
+                wp_enqueue_script('jquery-ui-droppable');
                 
-                // Workflow builder bundle
+                // Workflow builder script
                 wp_enqueue_script(
                     $this->plugin_name . '-builder',
-                    WA_PLUGIN_URL . 'assets/dist/workflow-builder.js',
-                    array('react', 'react-dom', 'wp-api', 'wp-i18n'),
+                    WA_PLUGIN_URL . 'assets/js/workflow-builder.js',
+                    array('jquery', 'jquery-ui-draggable', 'jquery-ui-droppable', 'wp-api'),
                     $this->version,
                     true
                 );
@@ -154,11 +163,16 @@ class Workflow_Admin {
                         'nonce' => wp_create_nonce('wp_rest'),
                         'workflow_id' => isset($_GET['workflow']) ? intval($_GET['workflow']) : 0,
                         'node_types' => $this->get_available_node_types(),
+                        'auto_save' => true,
+                        'auto_save_interval' => 2,
                         'i18n' => array(
                             'save' => __('Save', 'workflow-automation'),
                             'saving' => __('Saving...', 'workflow-automation'),
                             'saved' => __('Saved', 'workflow-automation'),
+                            'active' => __('Active', 'workflow-automation'),
+                            'inactive' => __('Inactive', 'workflow-automation'),
                             'unsaved_changes' => __('You have unsaved changes. Are you sure you want to leave?', 'workflow-automation'),
+                            'save_failed' => __('Failed to save workflow', 'workflow-automation'),
                         )
                     )
                 );
@@ -305,51 +319,7 @@ class Workflow_Admin {
      * @return   array
      */
     private function get_available_node_types() {
-        $node_types = array(
-            'triggers' => array(
-                array(
-                    'type' => 'webhook_start',
-                    'label' => __('Webhook Trigger', 'workflow-automation'),
-                    'description' => __('Start workflow when webhook is received', 'workflow-automation'),
-                    'icon' => 'dashicons-admin-links'
-                ),
-            ),
-            'actions' => array(
-                array(
-                    'type' => 'email',
-                    'label' => __('Send Email', 'workflow-automation'),
-                    'description' => __('Send an email notification', 'workflow-automation'),
-                    'icon' => 'dashicons-email'
-                ),
-                array(
-                    'type' => 'slack',
-                    'label' => __('Slack Message', 'workflow-automation'),
-                    'description' => __('Send a message to Slack', 'workflow-automation'),
-                    'icon' => 'dashicons-format-status'
-                ),
-                array(
-                    'type' => 'http',
-                    'label' => __('HTTP Request', 'workflow-automation'),
-                    'description' => __('Make an HTTP request', 'workflow-automation'),
-                    'icon' => 'dashicons-admin-site'
-                ),
-            ),
-            'logic' => array(
-                array(
-                    'type' => 'filter',
-                    'label' => __('Filter', 'workflow-automation'),
-                    'description' => __('Filter data based on conditions', 'workflow-automation'),
-                    'icon' => 'dashicons-filter'
-                ),
-                array(
-                    'type' => 'loop',
-                    'label' => __('Loop', 'workflow-automation'),
-                    'description' => __('Loop through array data', 'workflow-automation'),
-                    'icon' => 'dashicons-controls-repeat'
-                ),
-            ),
-        );
-        
-        return apply_filters('wa_available_node_types', $node_types);
+        // Use the centralized function
+        return wa_get_available_nodes();
     }
 }

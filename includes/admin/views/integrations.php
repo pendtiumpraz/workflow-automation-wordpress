@@ -111,7 +111,7 @@ $integration_types = array(
 );
 
 // Get existing integrations
-$integration_model = new WA_Integration_Settings_Model();
+$integration_model = new Integration_Settings_Model();
 $existing_integrations = array();
 foreach ($integration_types as $category_key => $category) {
     foreach ($category['integrations'] as $type => $integration) {
@@ -123,66 +123,107 @@ foreach ($integration_types as $category_key => $category) {
 }
 ?>
 
-<div class="wrap">
-    <h1><?php _e('Integrations', 'workflow-automation'); ?></h1>
-    <p><?php _e('Configure your external service integrations for use in workflows.', 'workflow-automation'); ?></p>
-    
-    <div class="wa-integrations-grid">
+<div class="wa-admin-wrap">
+    <!-- Modern Header -->
+    <div class="wa-admin-header">
+        <div class="wa-admin-header-content">
+            <div>
+                <h1 class="wa-admin-title">
+                    <span class="wa-logo">🔗</span>
+                    <?php _e('Integrations', 'workflow-automation'); ?>
+                </h1>
+                <p class="wa-admin-subtitle"><?php _e('Connect your favorite tools and services to power your workflows', 'workflow-automation'); ?></p>
+            </div>
+            <div class="wa-admin-actions">
+                <a href="<?php echo admin_url('admin.php?page=workflow-automation'); ?>" class="wa-btn wa-btn-outline">
+                    <span class="dashicons dashicons-arrow-left-alt"></span>
+                    <?php _e('Back to Workflows', 'workflow-automation'); ?>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="wa-container">
         <?php foreach ($integration_types as $category_key => $category) : ?>
-            <div class="wa-integration-category">
-                <h2><?php echo esc_html($category['label']); ?></h2>
+            <div class="wa-card wa-mb-4">
+                <div class="wa-card-header">
+                    <h2 class="wa-card-title">
+                        <span class="dashicons dashicons-<?php echo $category_key === 'communication' ? 'format-chat' : ($category_key === 'ai' ? 'admin-generic' : ($category_key === 'productivity' ? 'admin-tools' : 'groups')); ?>"></span>
+                        <?php echo esc_html($category['label']); ?>
+                    </h2>
+                </div>
                 
-                <div class="wa-integration-cards">
-                    <?php foreach ($category['integrations'] as $type => $integration) : ?>
-                        <?php
-                        $configured = isset($existing_integrations[$type]) && !empty($existing_integrations[$type]);
-                        $active_count = $configured ? count($existing_integrations[$type]) : 0;
-                        ?>
-                        <div class="wa-integration-card <?php echo $configured ? 'configured' : ''; ?>">
-                            <div class="wa-integration-header">
-                                <span class="dashicons <?php echo esc_attr($integration['icon']); ?>"></span>
-                                <h3><?php echo esc_html($integration['name']); ?></h3>
-                                <?php if ($configured) : ?>
-                                    <span class="wa-integration-badge"><?php echo sprintf(_n('%d active', '%d active', $active_count, 'workflow-automation'), $active_count); ?></span>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <p class="wa-integration-description">
-                                <?php echo esc_html($integration['description']); ?>
-                            </p>
-                            
-                            <div class="wa-integration-actions">
-                                <button type="button" 
-                                        class="button wa-configure-integration"
-                                        data-integration-type="<?php echo esc_attr($type); ?>"
-                                        data-integration-name="<?php echo esc_attr($integration['name']); ?>">
-                                    <?php echo $configured ? __('Manage', 'workflow-automation') : __('Configure', 'workflow-automation'); ?>
-                                </button>
-                                
-                                <?php if ($configured) : ?>
-                                    <button type="button" 
-                                            class="button wa-add-integration"
-                                            data-integration-type="<?php echo esc_attr($type); ?>"
-                                            data-integration-name="<?php echo esc_attr($integration['name']); ?>">
-                                        <?php _e('Add New', 'workflow-automation'); ?>
-                                    </button>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <?php if ($configured && !empty($existing_integrations[$type])) : ?>
-                                <div class="wa-integration-list">
-                                    <?php foreach ($existing_integrations[$type] as $config) : ?>
-                                        <div class="wa-integration-item">
-                                            <span class="wa-integration-name"><?php echo esc_html($config->name); ?></span>
-                                            <span class="wa-integration-status <?php echo $config->is_active ? 'active' : 'inactive'; ?>">
-                                                <?php echo $config->is_active ? __('Active', 'workflow-automation') : __('Inactive', 'workflow-automation'); ?>
-                                            </span>
+                <div class="wa-card-body">
+                    <div class="wa-grid wa-grid-3">
+                        <?php foreach ($category['integrations'] as $type => $integration) : ?>
+                            <?php
+                            $configured = isset($existing_integrations[$type]) && !empty($existing_integrations[$type]);
+                            $active_count = $configured ? count($existing_integrations[$type]) : 0;
+                            ?>
+                            <div class="wa-card wa-fade-in" style="margin-bottom: 0;">
+                                <div class="wa-card-body">
+                                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                        <div style="width: 3rem; height: 3rem; background: var(--wa-primary); border-radius: var(--wa-border-radius); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem;">
+                                            <span class="dashicons <?php echo esc_attr($integration['icon']); ?>" style="font-size: 1.5rem; width: 1.5rem; height: 1.5rem;"></span>
                                         </div>
-                                    <?php endforeach; ?>
+                                        <div style="flex: 1;">
+                                            <h4 style="margin: 0; font-size: 1.1rem; font-weight: 600;"><?php echo esc_html($integration['name']); ?></h4>
+                                            <?php if ($configured) : ?>
+                                                <span class="wa-badge wa-badge-success" style="margin-top: 0.25rem;">
+                                                    <span class="dashicons dashicons-yes-alt" style="font-size: 12px; width: 12px; height: 12px;"></span>
+                                                    <?php echo sprintf(_n('%d active', '%d active', $active_count, 'workflow-automation'), $active_count); ?>
+                                                </span>
+                                            <?php else : ?>
+                                                <span class="wa-badge wa-badge-gray" style="margin-top: 0.25rem;">
+                                                    <?php _e('Not configured', 'workflow-automation'); ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    
+                                    <p style="color: var(--wa-gray-600); margin-bottom: 1.5rem; font-size: 0.9rem;">
+                                        <?php echo esc_html($integration['description']); ?>
+                                    </p>
+                                    
+                                    <div class="wa-flex wa-gap-2">
+                                        <button type="button" 
+                                                class="wa-btn wa-btn-primary wa-btn-sm wa-configure-integration"
+                                                data-integration-type="<?php echo esc_attr($type); ?>"
+                                                data-integration-name="<?php echo esc_attr($integration['name']); ?>">
+                                            <span class="dashicons dashicons-admin-settings"></span>
+                                            <?php echo $configured ? __('Manage', 'workflow-automation') : __('Configure', 'workflow-automation'); ?>
+                                        </button>
+                                        
+                                        <?php if ($configured) : ?>
+                                            <button type="button" 
+                                                    class="wa-btn wa-btn-outline wa-btn-sm wa-add-integration"
+                                                    data-integration-type="<?php echo esc_attr($type); ?>"
+                                                    data-integration-name="<?php echo esc_attr($integration['name']); ?>">
+                                                <span class="dashicons dashicons-plus"></span>
+                                                <?php _e('Add New', 'workflow-automation'); ?>
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <?php if ($configured && !empty($existing_integrations[$type])) : ?>
+                                        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--wa-gray-200);">
+                                            <h5 style="margin: 0 0 0.75rem; font-size: 0.85rem; color: var(--wa-gray-700); font-weight: 600;">
+                                                <?php _e('Configured Instances', 'workflow-automation'); ?>
+                                            </h5>
+                                            <?php foreach ($existing_integrations[$type] as $config) : ?>
+                                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; font-size: 0.85rem;">
+                                                    <span style="color: var(--wa-gray-700);"><?php echo esc_html($config->name); ?></span>
+                                                    <span class="wa-badge wa-badge-<?php echo $config->is_active ? 'success' : 'gray'; ?>">
+                                                        <?php echo $config->is_active ? __('Active', 'workflow-automation') : __('Inactive', 'workflow-automation'); ?>
+                                                    </span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
-                            <?php endif; ?>
-                        </div>
-                    <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -193,7 +234,10 @@ foreach ($integration_types as $category_key => $category) {
 <div id="wa-integration-modal" class="wa-modal" style="display: none;">
     <div class="wa-modal-content">
         <div class="wa-modal-header">
-            <h2 id="wa-modal-title"><?php _e('Configure Integration', 'workflow-automation'); ?></h2>
+            <h2 id="wa-modal-title" class="wa-card-title">
+                <span class="dashicons dashicons-admin-settings"></span>
+                <?php _e('Configure Integration', 'workflow-automation'); ?>
+            </h2>
             <button type="button" class="wa-modal-close">&times;</button>
         </div>
         
@@ -202,9 +246,9 @@ foreach ($integration_types as $category_key => $category) {
                 <input type="hidden" id="integration-type" name="integration_type">
                 
                 <div class="wa-form-group">
-                    <label for="integration-name"><?php _e('Configuration Name', 'workflow-automation'); ?></label>
-                    <input type="text" id="integration-name" name="name" class="regular-text" required>
-                    <p class="description"><?php _e('A name to identify this configuration', 'workflow-automation'); ?></p>
+                    <label for="integration-name" class="wa-form-label"><?php _e('Configuration Name', 'workflow-automation'); ?></label>
+                    <input type="text" id="integration-name" name="name" class="wa-form-input" required>
+                    <p class="wa-form-help"><?php _e('A name to identify this configuration', 'workflow-automation'); ?></p>
                 </div>
                 
                 <div id="wa-integration-fields">
@@ -212,19 +256,21 @@ foreach ($integration_types as $category_key => $category) {
                 </div>
                 
                 <div class="wa-form-group">
-                    <label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
                         <input type="checkbox" name="is_active" value="1" checked>
-                        <?php _e('Active', 'workflow-automation'); ?>
+                        <span class="wa-form-label" style="margin-bottom: 0;"><?php _e('Active', 'workflow-automation'); ?></span>
                     </label>
                 </div>
             </form>
         </div>
         
         <div class="wa-modal-footer">
-            <button type="button" class="button button-primary" id="wa-save-integration">
+            <button type="button" class="wa-btn wa-btn-primary" id="wa-save-integration">
+                <span class="dashicons dashicons-yes"></span>
                 <?php _e('Save Integration', 'workflow-automation'); ?>
             </button>
-            <button type="button" class="button wa-modal-close">
+            <button type="button" class="wa-btn wa-btn-secondary wa-modal-close">
+                <span class="dashicons dashicons-no"></span>
                 <?php _e('Cancel', 'workflow-automation'); ?>
             </button>
         </div>
@@ -459,10 +505,10 @@ jQuery(document).ready(function($) {
         
         // Save via API
         $.ajax({
-            url: wa_admin.api_url + '/integrations',
+            url: '<?php echo home_url('/wp-json/wa/v1/integrations'); ?>',
             method: 'POST',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', wa_admin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce('wp_rest'); ?>');
             },
             data: JSON.stringify(data),
             contentType: 'application/json',
@@ -488,22 +534,22 @@ jQuery(document).ready(function($) {
     function createFieldHtml(fieldName) {
         var fieldConfig = getFieldConfig(fieldName);
         var html = '<div class="wa-form-group">';
-        html += '<label for="field-' + fieldName + '">' + fieldConfig.label + '</label>';
+        html += '<label for="field-' + fieldName + '" class="wa-form-label">' + fieldConfig.label + '</label>';
         
         if (fieldConfig.type === 'textarea') {
-            html += '<textarea id="field-' + fieldName + '" name="settings[' + fieldName + ']" class="large-text" rows="5"></textarea>';
+            html += '<textarea id="field-' + fieldName + '" name="settings[' + fieldName + ']" class="wa-form-textarea" rows="5"></textarea>';
         } else if (fieldConfig.type === 'select') {
-            html += '<select id="field-' + fieldName + '" name="settings[' + fieldName + ']" class="regular-text">';
+            html += '<select id="field-' + fieldName + '" name="settings[' + fieldName + ']" class="wa-form-select">';
             for (var value in fieldConfig.options) {
                 html += '<option value="' + value + '">' + fieldConfig.options[value] + '</option>';
             }
             html += '</select>';
         } else {
-            html += '<input type="' + fieldConfig.type + '" id="field-' + fieldName + '" name="settings[' + fieldName + ']" class="regular-text">';
+            html += '<input type="' + fieldConfig.type + '" id="field-' + fieldName + '" name="settings[' + fieldName + ']" class="wa-form-input">';
         }
         
         if (fieldConfig.description) {
-            html += '<p class="description">' + fieldConfig.description + '</p>';
+            html += '<p class="wa-form-help">' + fieldConfig.description + '</p>';
         }
         
         html += '</div>';

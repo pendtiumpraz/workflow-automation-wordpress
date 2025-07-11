@@ -138,41 +138,53 @@ $available_nodes = array(
 );
 ?>
 
-<div class="wrap wa-workflow-builder-wrap">
-    <div class="wa-builder-header">
-        <h1 class="wa-builder-title">
-            <a href="<?php echo admin_url('admin.php?page=workflow-automation'); ?>" class="dashicons dashicons-arrow-left-alt"></a>
-            <span id="wa-workflow-name"><?php echo esc_html($workflow->name); ?></span>
-            <button type="button" class="wa-edit-name dashicons dashicons-edit" title="<?php esc_attr_e('Edit name', 'workflow-automation'); ?>"></button>
-        </h1>
-        
-        <div class="wa-builder-actions">
-            <div class="wa-save-status">
-                <span class="wa-save-indicator"></span>
-                <span class="wa-save-message"><?php _e('All changes saved', 'workflow-automation'); ?></span>
+<div class="wa-admin-wrap">
+    <div class="wa-admin-header">
+        <div class="wa-admin-header-content">
+            <div>
+                <h1 class="wa-admin-title">
+                    <a href="<?php echo admin_url('admin.php?page=workflow-automation'); ?>" class="wa-logo" style="background: rgba(255, 255, 255, 0.2); color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 3rem; height: 3rem;">
+                        <span class="dashicons dashicons-arrow-left-alt"></span>
+                    </a>
+                    <span id="wa-workflow-name"><?php echo esc_html($workflow->name); ?></span>
+                    <button type="button" class="wa-edit-name" style="background: rgba(255, 255, 255, 0.2); color: white; border: none; padding: 0.5rem; border-radius: var(--wa-border-radius); cursor: pointer; margin-left: 1rem;" title="<?php esc_attr_e('Edit name', 'workflow-automation'); ?>">
+                        <span class="dashicons dashicons-edit"></span>
+                    </button>
+                </h1>
+                <p class="wa-admin-subtitle"><?php _e('Visual workflow builder with drag-and-drop interface', 'workflow-automation'); ?></p>
             </div>
             
-            <button type="button" id="wa-save-workflow" class="button button-primary">
-                <?php _e('Save', 'workflow-automation'); ?>
-            </button>
-            
-            <button type="button" id="wa-test-workflow" class="button">
-                <?php _e('Test', 'workflow-automation'); ?>
-            </button>
-            
-            <div class="wa-workflow-status">
-                <label class="wa-switch">
-                    <input type="checkbox" id="wa-workflow-active" <?php checked($workflow->status, 'active'); ?>>
-                    <span class="wa-slider"></span>
-                </label>
-                <span class="wa-status-label">
-                    <?php echo $workflow->status === 'active' ? __('Active', 'workflow-automation') : __('Inactive', 'workflow-automation'); ?>
-                </span>
+            <div class="wa-admin-actions">
+                <div class="wa-save-status" style="display: flex; align-items: center; gap: 0.5rem; color: rgba(255, 255, 255, 0.8); margin-right: 1rem;">
+                    <span class="wa-save-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: #46b450;"></span>
+                    <span class="wa-save-message"><?php _e('All changes saved', 'workflow-automation'); ?></span>
+                </div>
+                
+                <button type="button" id="wa-save-workflow" class="wa-btn wa-btn-success">
+                    <span class="dashicons dashicons-yes"></span>
+                    <?php _e('Save', 'workflow-automation'); ?>
+                </button>
+                
+                <button type="button" id="wa-test-workflow" class="wa-btn wa-btn-outline" style="color: white; border-color: rgba(255, 255, 255, 0.3);">
+                    <span class="dashicons dashicons-controls-play"></span>
+                    <?php _e('Test', 'workflow-automation'); ?>
+                </button>
+                
+                <div class="wa-workflow-status" style="display: flex; align-items: center; gap: 0.75rem; color: white;">
+                    <label class="wa-switch">
+                        <input type="checkbox" id="wa-workflow-active" <?php checked($workflow->status, 'active'); ?>>
+                        <span class="wa-slider"></span>
+                    </label>
+                    <span class="wa-status-label">
+                        <?php echo $workflow->status === 'active' ? __('Active', 'workflow-automation') : __('Inactive', 'workflow-automation'); ?>
+                    </span>
+                </div>
             </div>
         </div>
     </div>
     
-    <div class="wa-builder-container">
+    <div class="wrap wa-workflow-builder-wrap" style="margin: 0; height: calc(100vh - 160px);">
+        <div class="wa-builder-container" style="height: 100%;">
         <div class="wa-builder-sidebar">
             <h2><?php _e('Nodes', 'workflow-automation'); ?></h2>
             
@@ -187,7 +199,7 @@ $available_nodes = array(
                             <span class="dashicons dashicons-arrow-right-alt2"></span>
                             <?php echo esc_html(ucfirst($category)); ?>
                         </h3>
-                        <div class="wa-category-nodes" style="display: none;">
+                        <div class="wa-category-nodes">
                             <?php foreach ($nodes as $type => $node) : ?>
                                 <div class="wa-draggable-node" 
                                      data-node-type="<?php echo esc_attr($type); ?>"
@@ -233,6 +245,7 @@ $available_nodes = array(
                 </div>
             </div>
         </div>
+    </div>
     </div>
 </div>
 

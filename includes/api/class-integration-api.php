@@ -69,6 +69,33 @@ class Integration_API {
                 ),
             ),
         ));
+        
+        // POST /integrations
+        register_rest_route($this->namespace, '/integrations', array(
+            array(
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => array($this, 'create_integration'),
+                'permission_callback' => array($this, 'check_permission'),
+                'args' => array(
+                    'integration_type' => array(
+                        'required' => true,
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ),
+                    'name' => array(
+                        'required' => true,
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ),
+                    'settings' => array(
+                        'required' => true,
+                        'validate_callback' => array($this, 'validate_settings'),
+                    ),
+                    'is_active' => array(
+                        'default' => true,
+                        'sanitize_callback' => 'rest_sanitize_boolean',
+                    ),
+                ),
+            ),
+        ));
 
         // POST /integrations/test
         register_rest_route($this->namespace, '/integrations/test', array(
@@ -157,6 +184,75 @@ class Integration_API {
         $integration->settings = $this->sanitize_settings_for_output($integration->settings);
         
         return new WP_REST_Response($integration);
+    }
+    
+    /**
+     * Create integration
+     *
+     * @since    1.0.0
+     * @param    WP_REST_Request    $request    The REST request
+     * @return   WP_REST_Response|WP_Error
+     */
+    public function create_integration($request) {
+        $integration_model = new Integration_Settings_Model();
+        
+        $data = array(
+            'integration_type' => $request->get_param('integration_type'),
+            'name' => $request->get_param('name'),
+            'settings' => $request->get_param('settings'),
+            'is_active' => $request->get_param('is_active') ? 1 : 0,
+            'created_by' => get_current_user_id()
+        );
+        
+        // Validate required fields
+        if (empty($data['integration_type'])) {
+            return new WP_Error('missing_integration_type', __('Integration type is required', 'workflow-automation'), array('status' => 400));
+        }
+        
+        if (empty($data['name'])) {
+            return new WP_Error('missing_name', __('Integration name is required', 'workflow-automation'), array('status' => 400));
+        }
+        
+        if (empty($data['settings']) || !is_array($data['settings'])) {
+            return new WP_Error('missing_settings', __('Integration settings are required', 'workflow-automation'), array('status' => 400));
+        }
+        
+        $result = $integration_model->create($data);
+        
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        
+        if (!$result) {
+            return new WP_Error('create_failed', __('Failed to create integration', 'workflow-automation'), array('status' => 500));
+        }
+        
+        $integration = $integration_model->get($result);
+        if (!$integration) {
+            return new WP_Error('get_failed', __('Integration created but could not be retrieved', 'workflow-automation'), array('status' => 500));
+        }
+        
+        $integration->settings = $this->sanitize_settings_for_output($integration->settings);
+        
+        return new WP_REST_Response($integration, 201);
+    }
+    
+    /**
+     * Validate settings
+     *
+     * @since    1.0.0
+     * @param    mixed             $value     The value to validate
+     * @param    WP_REST_Request   $request   The REST request
+     * @param    string            $param     The parameter name
+     * @return   bool
+     */
+    public function validate_settings($value, $request, $param) {
+        if (!is_array($value)) {
+            return false;
+        }
+        
+        // Additional validation can be added here based on integration type
+        return true;
     }
 
     /**
