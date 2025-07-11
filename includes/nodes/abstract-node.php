@@ -234,6 +234,16 @@ abstract class WA_Abstract_Node {
     }
 
     /**
+     * Set node settings
+     *
+     * @since    1.0.0
+     * @param    array    $settings    The settings array
+     */
+    public function set_settings($settings) {
+        $this->settings = is_array($settings) ? $settings : array();
+    }
+    
+    /**
      * Get a setting value
      *
      * @since    1.0.0

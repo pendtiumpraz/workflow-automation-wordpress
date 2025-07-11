@@ -35,8 +35,22 @@ class Webhook_API {
      * @since    1.0.0
      */
     public function register_routes() {
-        // POST /webhooks/create
-        register_rest_route($this->namespace, '/webhooks/create', array(
+        // GET /webhooks
+        register_rest_route($this->namespace, '/webhooks', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'get_webhooks'),
+                'permission_callback' => array($this, 'check_admin_permission'),
+                'args' => array(
+                    'workflow_id' => array(
+                        'sanitize_callback' => 'absint',
+                    ),
+                ),
+            ),
+        ));
+
+        // POST /webhooks
+        register_rest_route($this->namespace, '/webhooks', array(
             array(
                 'methods' => WP_REST_Server::CREATABLE,
                 'callback' => array($this, 'create_webhook'),
@@ -70,6 +84,48 @@ class Webhook_API {
                     'workflow_id' => array(
                         'validate_callback' => function($param) {
                             return is_numeric($param);
+                        }
+                    ),
+                ),
+            ),
+        ));
+
+        // DELETE /webhooks/{id}
+        register_rest_route($this->namespace, '/webhooks/(?P<id>\d+)', array(
+            array(
+                'methods' => WP_REST_Server::DELETABLE,
+                'callback' => array($this, 'delete_webhook'),
+                'permission_callback' => array($this, 'check_admin_permission'),
+                'args' => array(
+                    'id' => array(
+                        'validate_callback' => function($param) {
+                            return is_numeric($param);
+                        }
+                    ),
+                ),
+            ),
+        ));
+
+        // PUT /webhooks/{id}
+        register_rest_route($this->namespace, '/webhooks/(?P<id>\d+)', array(
+            array(
+                'methods' => WP_REST_Server::EDITABLE,
+                'callback' => array($this, 'update_webhook'),
+                'permission_callback' => array($this, 'check_admin_permission'),
+                'args' => array(
+                    'id' => array(
+                        'validate_callback' => function($param) {
+                            return is_numeric($param);
+                        }
+                    ),
+                    'is_active' => array(
+                        'validate_callback' => function($param) {
+                            return is_bool($param);
+                        }
+                    ),
+                    'settings' => array(
+                        'validate_callback' => function($param) {
+                            return is_array($param);
                         }
                     ),
                 ),
@@ -262,5 +318,80 @@ class Webhook_API {
     private function is_json($string) {
         json_decode($string);
         return json_last_error() === JSON_ERROR_NONE;
+    }
+
+    /**
+     * Delete webhook
+     *
+     * @since    1.0.0
+     * @param    WP_REST_Request    $request    The REST request
+     * @return   WP_REST_Response|WP_Error
+     */
+    public function delete_webhook($request) {
+        $id = $request->get_param('id');
+        
+        $webhook_model = new Webhook_Model();
+        $webhook = $webhook_model->get($id);
+        
+        if (!$webhook) {
+            return new WP_Error('not_found', __('Webhook not found', 'workflow-automation'), array('status' => 404));
+        }
+        
+        $deleted = $webhook_model->delete($id);
+        
+        if (!$deleted) {
+            return new WP_Error('delete_failed', __('Failed to delete webhook', 'workflow-automation'), array('status' => 500));
+        }
+        
+        return new WP_REST_Response(array(
+            'success' => true,
+            'message' => __('Webhook deleted successfully', 'workflow-automation')
+        ));
+    }
+
+    /**
+     * Update webhook
+     *
+     * @since    1.0.0
+     * @param    WP_REST_Request    $request    The REST request
+     * @return   WP_REST_Response|WP_Error
+     */
+    public function update_webhook($request) {
+        $id = $request->get_param('id');
+        
+        $webhook_model = new Webhook_Model();
+        $webhook = $webhook_model->get($id);
+        
+        if (!$webhook) {
+            return new WP_Error('not_found', __('Webhook not found', 'workflow-automation'), array('status' => 404));
+        }
+        
+        $update_data = array();
+        
+        if ($request->has_param('is_active')) {
+            $update_data['is_active'] = $request->get_param('is_active') ? 1 : 0;
+        }
+        
+        if ($request->has_param('settings')) {
+            $update_data['settings'] = json_encode($request->get_param('settings'));
+        }
+        
+        if (empty($update_data)) {
+            return new WP_Error('no_data', __('No data to update', 'workflow-automation'), array('status' => 400));
+        }
+        
+        $updated = $webhook_model->update($id, $update_data);
+        
+        if (!$updated) {
+            return new WP_Error('update_failed', __('Failed to update webhook', 'workflow-automation'), array('status' => 500));
+        }
+        
+        $webhook = $webhook_model->get($id);
+        if ($webhook->settings) {
+            $webhook->settings = json_decode($webhook->settings, true);
+        }
+        $webhook->webhook_url = Webhook_Handler::get_webhook_url($webhook->webhook_key);
+        
+        return new WP_REST_Response($webhook);
     }
 }

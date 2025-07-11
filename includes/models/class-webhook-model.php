@@ -166,6 +166,85 @@ class Webhook_Model {
      * @return   string
      */
     public function get_webhook_url($key) {
-        return home_url('/wa-webhook/' . $key);
+        require_once WA_PLUGIN_DIR . 'includes/class-webhook-handler.php';
+        return Webhook_Handler::get_webhook_url($key);
+    }
+    
+    /**
+     * Get webhook by ID
+     *
+     * @since    1.0.0
+     * @param    int    $id    The webhook ID
+     * @return   object|null
+     */
+    public function get($id) {
+        global $wpdb;
+        
+        $sql = $wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE id = %d",
+            $id
+        );
+        
+        $result = $wpdb->get_row($sql);
+        
+        if ($result && $result->settings) {
+            $result->settings = json_decode($result->settings, true);
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Update webhook
+     *
+     * @since    1.0.0
+     * @param    int      $id     The webhook ID
+     * @param    array    $data   Data to update
+     * @return   bool
+     */
+    public function update($id, $data) {
+        global $wpdb;
+        
+        $formats = array();
+        foreach ($data as $key => $value) {
+            switch ($key) {
+                case 'workflow_id':
+                case 'is_active':
+                    $formats[] = '%d';
+                    break;
+                default:
+                    $formats[] = '%s';
+                    break;
+            }
+        }
+        
+        $result = $wpdb->update(
+            $this->table_name,
+            $data,
+            array('id' => $id),
+            $formats,
+            array('%d')
+        );
+        
+        return $result !== false;
+    }
+    
+    /**
+     * Delete webhook
+     *
+     * @since    1.0.0
+     * @param    int    $id    The webhook ID
+     * @return   bool
+     */
+    public function delete($id) {
+        global $wpdb;
+        
+        $result = $wpdb->delete(
+            $this->table_name,
+            array('id' => $id),
+            array('%d')
+        );
+        
+        return $result !== false;
     }
 }

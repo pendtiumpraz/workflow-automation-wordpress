@@ -112,6 +112,13 @@ class Workflow_Executor {
             'parser' => 'class-parser-node.php'
         );
         
+        // AI nodes
+        $ai_nodes = array(
+            'openai' => 'class-openai-node.php',
+            'claude' => 'class-claude-node.php',
+            'gemini' => 'class-gemini-node.php'
+        );
+        
         foreach ($logic_nodes as $type => $file) {
             $path = $nodes_dir . 'logic/' . $file;
             if (file_exists($path)) {
@@ -128,6 +135,35 @@ class Workflow_Executor {
             if (file_exists($path)) {
                 require_once $path;
                 $class_name = 'WA_' . ucfirst($type) . '_Node';
+                if (class_exists($class_name)) {
+                    $this->node_types[$type] = $class_name;
+                }
+            }
+        }
+        
+        foreach ($ai_nodes as $type => $file) {
+            $path = $nodes_dir . 'ai/' . $file;
+            if (file_exists($path)) {
+                require_once $path;
+                $class_name = 'WA_' . ucfirst($type) . '_Node';
+                if (class_exists($class_name)) {
+                    $this->node_types[$type] = $class_name;
+                }
+            }
+        }
+        
+        // WordPress nodes
+        $wp_nodes = array(
+            'wp_post' => 'class-wp-post-node.php',
+            'wp_user' => 'class-wp-user-node.php',
+            'wp_media' => 'class-wp-media-node.php'
+        );
+        
+        foreach ($wp_nodes as $type => $file) {
+            $path = $nodes_dir . 'wordpress/' . $file;
+            if (file_exists($path)) {
+                require_once $path;
+                $class_name = 'WA_' . str_replace('_', '_', ucfirst($type)) . '_Node';
                 if (class_exists($class_name)) {
                     $this->node_types[$type] = $class_name;
                 }

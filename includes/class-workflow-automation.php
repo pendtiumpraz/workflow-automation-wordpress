@@ -118,6 +118,9 @@ class Workflow_Automation {
         
         // Load icon manager
         require_once WA_PLUGIN_DIR . 'includes/class-node-icons.php';
+        
+        // Load webhook handler
+        require_once WA_PLUGIN_DIR . 'includes/class-webhook-handler.php';
 
         $this->loader = new Workflow_Automation_Loader();
     }
@@ -156,8 +159,8 @@ class Workflow_Automation {
      * @access   private
      */
     private function define_public_hooks() {
-        // Add webhook handling
-        $this->loader->add_action('template_redirect', $this, 'handle_webhook_request');
+        // Initialize webhook handler
+        $webhook_handler = new Webhook_Handler();
         
         // Add cron hooks
         $this->loader->add_action('wa_execute_workflow', $this, 'execute_workflow_cron');
@@ -193,19 +196,6 @@ class Workflow_Automation {
         $this->loader->add_action('rest_api_init', $node_api, 'register_routes');
     }
 
-    /**
-     * Handle webhook requests
-     *
-     * @since    1.0.0
-     */
-    public function handle_webhook_request() {
-        $webhook_key = get_query_var('wa_webhook');
-        if ($webhook_key) {
-            $webhook_api = new Webhook_API();
-            $webhook_api->handle_webhook_request($webhook_key);
-            exit;
-        }
-    }
 
     /**
      * Execute workflow via cron

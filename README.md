@@ -2,9 +2,9 @@
 
 A powerful WordPress plugin that brings OpsGuide's workflow automation capabilities to WordPress. This plugin allows you to create visual workflows with various integrations including LINE, Google Sheets, LLMs, and more.
 
-## 🚀 Current Progress: 65%
+## 🚀 Current Progress: 75%
 
-### ✅ Completed Features (65%)
+### ✅ Completed Features (75%)
 - [x] Core plugin architecture and structure
 - [x] Database schema and models
 - [x] REST API endpoints
@@ -13,6 +13,7 @@ A powerful WordPress plugin that brings OpsGuide's workflow automation capabilit
 - [x] Integration settings with encryption
 - [x] Error handling and retry logic
 - [x] Icon system for visual identification
+- [x] Webhook handling system with security features
 - [x] Node types:
   - [x] Webhook Start Node
   - [x] Email Node
@@ -26,23 +27,24 @@ A powerful WordPress plugin that brings OpsGuide's workflow automation capabilit
   - [x] Format Data Node
   - [x] Parse Data Node
 
-### 🔄 In Progress (20%)
-- [ ] React-based workflow builder UI (20% complete)
-- [ ] WordPress admin interface (30% complete)
-- [ ] Webhook handling system (50% complete)
+### 🔄 In Progress (15%)
+- [ ] React-based workflow builder UI (40% complete)
+- [ ] WordPress admin interface (60% complete)
+- [ ] AI nodes (OpenAI/Claude/Gemini) (20% complete)
+- [ ] WordPress-specific nodes (10% complete)
+- [ ] Workflow templates system (15% complete)
 - [ ] Testing suite (10% complete)
 
-### ❌ To Do (15%)
-- [ ] OpenAI/Claude/Gemini nodes
+### ❌ To Do (10%)
 - [ ] Microsoft 365 integration
 - [ ] HubSpot integration
 - [ ] Notion integration
 - [ ] Telegram/WhatsApp nodes
-- [ ] WordPress-specific nodes (Posts, Users, Media)
-- [ ] Workflow templates
 - [ ] Import/Export functionality
 - [ ] Multi-language support
 - [ ] Performance optimization
+- [ ] Analytics dashboard
+- [ ] Team collaboration features
 
 ## 📊 Current Architecture
 
@@ -62,8 +64,12 @@ workflow-automation/
 │   │   ├── class-workflow-admin.php     # Admin functionality
 │   │   └── views/
 │   │       ├── workflows.php
-│   │       ├── workflow-builder.php
-│   │       └── integrations.php
+│   │       ├── workflows-list.php       # Workflow list view
+│   │       ├── workflow-builder.php     # Visual workflow builder
+│   │       ├── workflow-new.php         # New workflow creation
+│   │       ├── integrations.php         # Integration management
+│   │       ├── executions-list.php      # Execution history
+│   │       └── settings.php             # Plugin settings
 │   ├── api/
 │   │   ├── class-workflow-api.php       # Workflow REST API
 │   │   ├── class-webhook-api.php        # Webhook REST API
@@ -76,6 +82,8 @@ workflow-automation/
 │   │   ├── class-execution-model.php
 │   │   ├── class-webhook-model.php
 │   │   └── class-integration-settings-model.php
+│   ├── class-webhook-handler.php        # Webhook processing
+│   ├── class-workflow-templates.php     # Workflow templates
 │   └── nodes/
 │       ├── abstract-node.php            # Base node class
 │       ├── webhook/
@@ -89,10 +97,18 @@ workflow-automation/
 │       ├── logic/
 │       │   ├── class-filter-node.php
 │       │   └── class-loop-node.php
-│       └── data/
-│           ├── class-transform-node.php
-│           ├── class-formatter-node.php
-│           └── class-parser-node.php
+│       ├── data/
+│       │   ├── class-transform-node.php
+│       │   ├── class-formatter-node.php
+│       │   └── class-parser-node.php
+│       ├── ai/                          # AI integration nodes
+│       │   ├── class-openai-node.php
+│       │   ├── class-claude-node.php
+│       │   └── class-gemini-node.php
+│       └── wordpress/                   # WordPress-specific nodes
+│           ├── class-post-node.php
+│           ├── class-user-node.php
+│           └── class-media-node.php
 ├── admin/
 │   ├── css/
 │   │   └── workflow-icons.css
@@ -104,6 +120,7 @@ workflow-automation/
 ├── assets/
 │   ├── css/
 │   ├── js/
+│   │   └── workflow-builder.js  # Workflow builder JavaScript
 │   └── dist/                    # React build output
 ├── languages/                   # Translation files
 └── tests/                      # PHPUnit tests
@@ -121,19 +138,20 @@ workflow-automation/
 │   ├── REST API layer
 │   └── Error handling system
 │
-├── Node System (85% Complete)
+├── Node System (90% Complete)
 │   ├── Abstract node framework ✅
 │   ├── Trigger nodes ✅
-│   ├── Action nodes (70%)
+│   ├── Action nodes (80%)
 │   ├── Logic nodes ✅
 │   ├── Data transformation nodes ✅
-│   └── WordPress nodes ❌
+│   ├── AI nodes 🔄
+│   └── WordPress nodes 🔄
 │
-├── Integration Layer (60% Complete)
+├── Integration Layer (75% Complete)
 │   ├── Integration settings ✅
 │   ├── Credential encryption ✅
 │   ├── OAuth handling 🔄
-│   ├── Webhook processing 🔄
+│   ├── Webhook processing ✅
 │   └── API connectors (partial)
 │
 ├── Workflow Engine (✅ Complete)
@@ -143,15 +161,15 @@ workflow-automation/
 │   ├── Error recovery
 │   └── Retry mechanisms
 │
-├── User Interface (20% Complete)
-│   ├── Admin menu integration 🔄
-│   ├── Workflow list view 🔄
-│   ├── Visual workflow builder ❌
-│   ├── Node configuration UI ❌
-│   └── Execution monitoring ❌
+├── User Interface (40% Complete)
+│   ├── Admin menu integration ✅
+│   ├── Workflow list view ✅
+│   ├── Visual workflow builder 🔄
+│   ├── Node configuration UI 🔄
+│   └── Execution monitoring 🔄
 │
-└── Advanced Features (0% Complete)
-    ├── Workflow templates ❌
+└── Advanced Features (5% Complete)
+    ├── Workflow templates 🔄
     ├── Version control ❌
     ├── Team collaboration ❌
     ├── Analytics dashboard ❌
@@ -259,11 +277,16 @@ This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) 
 
 ## 🔄 Version History
 
-### 1.0.0 (Current Development)
+### 1.0.0 (Current Development - 75% Complete)
 - Initial plugin architecture
 - Core node system
-- Basic integrations
+- Basic integrations (Slack, Email, Google Sheets, LINE)
 - Error handling system
+- Webhook handling with security
+- Admin interface improvements
+- Visual workflow builder (in progress)
+- AI nodes foundation (OpenAI, Claude, Gemini)
+- WordPress-specific nodes foundation
 
 ---
 

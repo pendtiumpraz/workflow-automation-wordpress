@@ -142,6 +142,12 @@
     margin-right: 10px;
 }
 
+/* AI Node Icons */
+.wa-icon-ai { color: #9C27B0; }
+.wa-icon-openai { color: #00A67E; }
+.wa-icon-claude { color: #D4A373; }
+.wa-icon-gemini { color: #4285F4; }
+
 .wa-integration-list {
     list-style: none;
     margin: 0;

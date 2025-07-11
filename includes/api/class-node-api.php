@@ -97,7 +97,7 @@ class Node_API {
         
         foreach ($node_types as $type => $class_name) {
             if (class_exists($class_name)) {
-                $node = new $class_name();
+                $node = new $class_name('temp_' . $type);
                 $options = $node->get_options();
                 
                 $result[] = array(
@@ -173,7 +173,7 @@ class Node_API {
         }
         
         try {
-            $node = new $class_name();
+            $node = new $class_name('temp_' . $type);
             $node->set_settings($settings);
             
             $validation = $node->validate_settings();
