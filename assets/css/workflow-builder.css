@@ -504,3 +504,25 @@ input:checked + .wa-slider:before {
 .wa-node-port:hover {
     background: #0073aa;
 }
+
+/* Canvas hover state */
+.wa-canvas-hover {
+    background: rgba(0, 115, 170, 0.05);
+}
+
+/* Dragging state */
+.ui-draggable-dragging {
+    opacity: 0.8;
+    cursor: move !important;
+}
+
+/* Canvas positioning */
+#wa-workflow-canvas {
+    position: relative;
+    min-height: 100%;
+}
+
+/* Node positioning */
+.wa-workflow-node {
+    user-select: none;
+}

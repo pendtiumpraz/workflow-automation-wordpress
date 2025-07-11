@@ -19,6 +19,7 @@
 
         init: function() {
             if (typeof waWorkflowData === 'undefined') {
+                console.error('Workflow data not found');
                 return;
             }
 
@@ -27,8 +28,10 @@
             this.initializeSidebar();
             this.initializeCanvas();
             
+            console.log('Workflow Builder initialized');
+            
             // Enable auto-save if configured
-            if (wa_builder.auto_save) {
+            if (wa_builder && wa_builder.auto_save) {
                 this.startAutoSave();
             }
         },
@@ -106,14 +109,24 @@
 
         initializeSidebar: function() {
             var self = this;
+            
+            console.log('Initializing sidebar, found nodes:', $('.wa-draggable-node').length);
 
             // Make nodes draggable
             $('.wa-draggable-node').draggable({
                 helper: 'clone',
                 cursor: 'move',
                 revert: 'invalid',
+                connectToSortable: false,
                 start: function(event, ui) {
-                    ui.helper.css('z-index', 10000);
+                    console.log('Drag started:', ui.helper);
+                    ui.helper.css({
+                        'z-index': 10000,
+                        'opacity': 0.8
+                    });
+                },
+                stop: function(event, ui) {
+                    console.log('Drag stopped');
                 }
             });
             
@@ -129,22 +142,40 @@
 
             // Initialize canvas container
             this.canvas = $('#wa-workflow-canvas');
+            
+            console.log('Canvas element:', this.canvas.length);
 
             // Make canvas droppable
             this.canvas.droppable({
                 accept: '.wa-draggable-node',
+                tolerance: 'fit',
                 drop: function(event, ui) {
-                    var nodeType = ui.draggable.data('node-type');
-                    var nodeLabel = ui.draggable.data('node-label');
-                    var nodeIcon = ui.draggable.data('node-icon');
-                    var nodeColor = ui.draggable.data('node-color');
+                    console.log('Node dropped!');
+                    
+                    // Check if it's from the sidebar (not already on canvas)
+                    if (!ui.draggable.hasClass('wa-workflow-node')) {
+                        var nodeType = ui.draggable.data('node-type');
+                        var nodeLabel = ui.draggable.data('node-label');
+                        var nodeIcon = ui.draggable.data('node-icon');
+                        var nodeColor = ui.draggable.data('node-color');
 
-                    var position = {
-                        x: ui.position.left - $(this).offset().left,
-                        y: ui.position.top - $(this).offset().top
-                    };
+                        // Calculate position relative to canvas
+                        var canvasOffset = $(this).offset();
+                        var position = {
+                            x: ui.offset.left - canvasOffset.left,
+                            y: ui.offset.top - canvasOffset.top
+                        };
 
-                    self.addNode(nodeType, nodeLabel, nodeIcon, nodeColor, position);
+                        self.addNode(nodeType, nodeLabel, nodeIcon, nodeColor, position);
+                    }
+                },
+                over: function(event, ui) {
+                    console.log('Node over canvas');
+                    $(this).addClass('wa-canvas-hover');
+                },
+                out: function(event, ui) {
+                    console.log('Node out of canvas');
+                    $(this).removeClass('wa-canvas-hover');
                 }
             });
 
@@ -155,7 +186,7 @@
         },
 
         addNode: function(type, label, icon, color, position) {
-            var nodeId = 'node_' + Date.now();
+            var nodeId = 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
             var node = {
                 id: nodeId,
@@ -170,6 +201,8 @@
             this.nodes.push(node);
             this.renderNode(node);
             this.markDirty();
+            
+            console.log('Node added:', node);
         },
 
         renderNode: function(node) {
@@ -178,6 +211,7 @@
             var nodeHtml = $('<div>')
                 .addClass('wa-workflow-node')
                 .attr('id', node.id)
+                .attr('data-node-id', node.id)
                 .css({
                     left: node.position.x + 'px',
                     top: node.position.y + 'px',
@@ -197,10 +231,11 @@
 
             this.canvas.append(nodeHtml);
 
-            // Make node draggable
+            // Make node draggable within canvas
             nodeHtml.draggable({
                 containment: 'parent',
                 handle: '.wa-node-header',
+                grid: [10, 10],
                 drag: function() {
                     self.updateConnections(node.id);
                 },
@@ -227,347 +262,194 @@
             });
 
             // Double click to configure
-            nodeHtml.on('dblclick', function() {
+            nodeHtml.on('dblclick', function(e) {
+                e.stopPropagation();
                 self.showNodeConfiguration(node);
             });
         },
 
+        loadNodes: function(nodes) {
+            var self = this;
+            nodes.forEach(function(nodeData) {
+                // Convert stored node data to our format
+                var node = {
+                    id: nodeData.node_id,
+                    type: nodeData.node_type,
+                    label: self.getNodeLabel(nodeData.node_type),
+                    icon: self.getNodeIcon(nodeData.node_type),
+                    color: self.getNodeColor(nodeData.node_type),
+                    position: {
+                        x: nodeData.position_x || 100,
+                        y: nodeData.position_y || 100
+                    },
+                    data: JSON.parse(nodeData.settings || '{}')
+                };
+                
+                self.nodes.push(node);
+                self.renderNode(node);
+            });
+        },
+
+        getNodeLabel: function(type) {
+            // Get label from available nodes data
+            if (this.workflow.availableNodes) {
+                for (var category in this.workflow.availableNodes) {
+                    if (this.workflow.availableNodes[category][type]) {
+                        return this.workflow.availableNodes[category][type].label;
+                    }
+                }
+            }
+            return type;
+        },
+
+        getNodeIcon: function(type) {
+            // Get icon from available nodes data
+            if (this.workflow.availableNodes) {
+                for (var category in this.workflow.availableNodes) {
+                    if (this.workflow.availableNodes[category][type]) {
+                        return this.workflow.availableNodes[category][type].icon;
+                    }
+                }
+            }
+            return 'dashicons-admin-generic';
+        },
+
+        getNodeColor: function(type) {
+            // Get color from available nodes data
+            if (this.workflow.availableNodes) {
+                for (var category in this.workflow.availableNodes) {
+                    if (this.workflow.availableNodes[category][type]) {
+                        return this.workflow.availableNodes[category][type].color;
+                    }
+                }
+            }
+            return '#555';
+        },
+
         selectNode: function(node) {
-            this.selectedNode = node;
-            
-            // Update UI
+            // Remove previous selection
             $('.wa-workflow-node').removeClass('selected');
+            
+            // Select new node
             $('#' + node.id).addClass('selected');
+            this.selectedNode = node;
             
             // Show properties
             this.showNodeProperties(node);
         },
 
         showNodeProperties: function(node) {
-            var propertiesHtml = '<div class="wa-node-properties">' +
-                                '<div class="wa-property-group">' +
-                                '<h3>Basic Information</h3>' +
-                                '<div class="wa-property-row">' +
-                                '<label>Node ID</label>' +
-                                '<input type="text" value="' + node.id + '" readonly>' +
-                                '</div>' +
-                                '<div class="wa-property-row">' +
-                                '<label>Type</label>' +
-                                '<input type="text" value="' + node.type + '" readonly>' +
-                                '</div>' +
-                                '<div class="wa-property-row">' +
-                                '<label>Label</label>' +
-                                '<input type="text" id="node-label" value="' + node.label + '">' +
-                                '</div>' +
-                                '</div>' +
-                                '<div class="wa-property-group">' +
-                                '<button type="button" class="button button-primary" id="wa-configure-node">Configure Node</button>' +
-                                '</div>' +
-                                '</div>';
-
-            $('#wa-properties-content').html(propertiesHtml);
-
-            // Bind property events
-            var self = this;
-            $('#node-label').on('input', function() {
-                node.label = $(this).val();
-                $('#' + node.id + ' .wa-node-label').text(node.label);
-                self.markDirty();
-            });
-
-            $('#wa-configure-node').on('click', function() {
-                self.showNodeConfiguration(node);
-            });
+            var html = '<div class="wa-node-properties">';
+            html += '<div class="wa-property-group">';
+            html += '<h3>General</h3>';
+            html += '<div class="wa-property-row">';
+            html += '<label>ID</label>';
+            html += '<input type="text" value="' + node.id + '" readonly>';
+            html += '</div>';
+            html += '<div class="wa-property-row">';
+            html += '<label>Type</label>';
+            html += '<input type="text" value="' + node.type + '" readonly>';
+            html += '</div>';
+            html += '<div class="wa-property-row">';
+            html += '<label>Label</label>';
+            html += '<input type="text" value="' + node.label + '" readonly>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="wa-property-group">';
+            html += '<button type="button" class="button button-primary" onclick="WorkflowBuilder.showNodeConfiguration(WorkflowBuilder.selectedNode)">Configure Node</button>';
+            html += '</div>';
+            html += '</div>';
+            
+            $('#wa-properties-content').html(html);
         },
 
         showNodeConfiguration: function(node) {
+            var self = this;
+            
             $('#wa-node-config-title').text('Configure ' + node.label);
-            
-            // Load node-specific configuration fields
-            this.loadNodeConfigFields(node);
-            
             $('#wa-node-config-modal').show();
+            
+            // Load node configuration fields
+            this.loadNodeConfigFields(node);
         },
 
         loadNodeConfigFields: function(node) {
-            var fieldsHtml = '';
+            var self = this;
             
-            // Add fields based on node type
-            switch(node.type) {
-                case 'webhook_start':
-                    fieldsHtml = this.getWebhookFields(node);
-                    break;
-                case 'email':
-                    fieldsHtml = this.getEmailFields(node);
-                    break;
-                case 'slack':
-                    fieldsHtml = this.getSlackFields(node);
-                    break;
-                case 'line':
-                    fieldsHtml = this.getLineFields(node);
-                    break;
-                case 'google_sheets':
-                    fieldsHtml = this.getGoogleSheetsFields(node);
-                    break;
-                case 'openai':
-                case 'claude':
-                case 'gemini':
-                    fieldsHtml = this.getAIFields(node);
-                    break;
-                case 'wp_post':
-                    fieldsHtml = this.getWPPostFields(node);
-                    break;
-                case 'filter':
-                    fieldsHtml = this.getFilterFields(node);
-                    break;
-                case 'code':
-                    fieldsHtml = this.getCodeFields(node);
-                    break;
-                default:
-                    fieldsHtml = '<p>No configuration options available for this node type.</p>';
-            }
+            // Get node configuration schema via API
+            $.ajax({
+                url: wa_builder.api_url + '/nodes/types/' + node.type + '/schema',
+                method: 'GET',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-WP-Nonce', wa_builder.nonce);
+                },
+                success: function(schema) {
+                    self.renderConfigFields(node, schema);
+                },
+                error: function() {
+                    $('#wa-node-config-fields').html('<p>Failed to load configuration fields.</p>');
+                }
+            });
+        },
+
+        renderConfigFields: function(node, schema) {
+            var html = '';
             
-            $('#wa-node-config-fields').html(fieldsHtml).data('node-id', node.id);
-        },
-
-        getWebhookFields: function(node) {
-            var data = node.data || {};
-            return '<div class="wa-form-group">' +
-                   '<label>Webhook Method</label>' +
-                   '<select name="method">' +
-                   '<option value="POST"' + (data.method === 'POST' ? ' selected' : '') + '>POST</option>' +
-                   '<option value="GET"' + (data.method === 'GET' ? ' selected' : '') + '>GET</option>' +
-                   '</select>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Authentication</label>' +
-                   '<select name="auth_type">' +
-                   '<option value="none"' + (data.auth_type === 'none' ? ' selected' : '') + '>None</option>' +
-                   '<option value="token"' + (data.auth_type === 'token' ? ' selected' : '') + '>Token</option>' +
-                   '<option value="signature"' + (data.auth_type === 'signature' ? ' selected' : '') + '>Signature</option>' +
-                   '</select>' +
-                   '</div>';
-        },
-
-        getEmailFields: function(node) {
-            var data = node.data || {};
-            return '<div class="wa-form-group">' +
-                   '<label>To Email</label>' +
-                   '<input type="email" name="to_email" value="' + (data.to_email || '') + '" placeholder="recipient@example.com">' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Subject</label>' +
-                   '<input type="text" name="subject" value="' + (data.subject || '') + '" placeholder="Email subject">' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Message Template</label>' +
-                   '<textarea name="message" rows="5" placeholder="Email message template">' + (data.message || '') + '</textarea>' +
-                   '<p class="description">Use {{variable}} for dynamic content</p>' +
-                   '</div>';
-        },
-
-        getSlackFields: function(node) {
-            var data = node.data || {};
-            return '<div class="wa-form-group">' +
-                   '<label>Integration</label>' +
-                   '<select name="integration_id">' +
-                   '<option value="">Select Slack integration</option>' +
-                   '</select>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Channel</label>' +
-                   '<input type="text" name="channel" value="' + (data.channel || '') + '" placeholder="#general">' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Message</label>' +
-                   '<textarea name="message" rows="5" placeholder="Message template">' + (data.message || '') + '</textarea>' +
-                   '</div>';
-        },
-
-        getLineFields: function(node) {
-            var data = node.data || {};
-            return '<div class="wa-form-group">' +
-                   '<label>Integration</label>' +
-                   '<select name="integration_id">' +
-                   '<option value="">Select LINE integration</option>' +
-                   '</select>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Reply Token</label>' +
-                   '<input type="text" name="reply_token" value="' + (data.reply_token || '{{webhook.replyToken}}') + '">' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Message Type</label>' +
-                   '<select name="message_type">' +
-                   '<option value="text"' + (data.message_type === 'text' ? ' selected' : '') + '>Text</option>' +
-                   '<option value="template"' + (data.message_type === 'template' ? ' selected' : '') + '>Template</option>' +
-                   '<option value="flex"' + (data.message_type === 'flex' ? ' selected' : '') + '>Flex Message</option>' +
-                   '</select>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Message</label>' +
-                   '<textarea name="message" rows="5">' + (data.message || '') + '</textarea>' +
-                   '</div>';
-        },
-
-        getGoogleSheetsFields: function(node) {
-            var data = node.data || {};
-            return '<div class="wa-form-group">' +
-                   '<label>Integration</label>' +
-                   '<select name="integration_id">' +
-                   '<option value="">Select Google integration</option>' +
-                   '</select>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Spreadsheet ID</label>' +
-                   '<input type="text" name="spreadsheet_id" value="' + (data.spreadsheet_id || '') + '">' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Sheet Name</label>' +
-                   '<input type="text" name="sheet_name" value="' + (data.sheet_name || 'Sheet1') + '">' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Action</label>' +
-                   '<select name="action">' +
-                   '<option value="append"' + (data.action === 'append' ? ' selected' : '') + '>Append Row</option>' +
-                   '<option value="update"' + (data.action === 'update' ? ' selected' : '') + '>Update Row</option>' +
-                   '<option value="read"' + (data.action === 'read' ? ' selected' : '') + '>Read Data</option>' +
-                   '</select>' +
-                   '</div>';
-        },
-
-        getAIFields: function(node) {
-            var data = node.data || {};
-            return '<div class="wa-form-group">' +
-                   '<label>Integration</label>' +
-                   '<select name="integration_id">' +
-                   '<option value="">Select ' + node.label + ' integration</option>' +
-                   '</select>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Model</label>' +
-                   '<select name="model">' +
-                   this.getModelOptions(node.type, data.model) +
-                   '</select>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>System Prompt</label>' +
-                   '<textarea name="system_prompt" rows="3">' + (data.system_prompt || '') + '</textarea>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>User Prompt</label>' +
-                   '<textarea name="user_prompt" rows="5">' + (data.user_prompt || '') + '</textarea>' +
-                   '<p class="description">Use {{variable}} for dynamic content</p>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Temperature</label>' +
-                   '<input type="number" name="temperature" value="' + (data.temperature || 0.7) + '" min="0" max="2" step="0.1">' +
-                   '</div>';
-        },
-
-        getModelOptions: function(type, selected) {
-            var options = '';
-            var models = {
-                'openai': ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-                'claude': ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
-                'gemini': ['gemini-pro', 'gemini-pro-vision']
-            };
-            
-            if (models[type]) {
-                models[type].forEach(function(model) {
-                    options += '<option value="' + model + '"' + (selected === model ? ' selected' : '') + '>' + model + '</option>';
+            if (schema && schema.fields) {
+                schema.fields.forEach(function(field) {
+                    html += '<div class="wa-form-group">';
+                    html += '<label>' + field.label + '</label>';
+                    
+                    var value = node.data[field.key] || field.default || '';
+                    
+                    switch (field.type) {
+                        case 'select':
+                            html += '<select name="' + field.key + '" class="regular-text">';
+                            for (var optValue in field.options) {
+                                html += '<option value="' + optValue + '"' + (value === optValue ? ' selected' : '') + '>';
+                                html += field.options[optValue] + '</option>';
+                            }
+                            html += '</select>';
+                            break;
+                            
+                        case 'textarea':
+                            html += '<textarea name="' + field.key + '" class="large-text" rows="5">' + value + '</textarea>';
+                            break;
+                            
+                        default:
+                            html += '<input type="' + field.type + '" name="' + field.key + '" value="' + value + '" class="regular-text">';
+                    }
+                    
+                    if (field.description) {
+                        html += '<p class="description">' + field.description + '</p>';
+                    }
+                    
+                    html += '</div>';
                 });
             }
             
-            return options;
-        },
-
-        getWPPostFields: function(node) {
-            var data = node.data || {};
-            return '<div class="wa-form-group">' +
-                   '<label>Action</label>' +
-                   '<select name="action">' +
-                   '<option value="create"' + (data.action === 'create' ? ' selected' : '') + '>Create Post</option>' +
-                   '<option value="update"' + (data.action === 'update' ? ' selected' : '') + '>Update Post</option>' +
-                   '<option value="get"' + (data.action === 'get' ? ' selected' : '') + '>Get Post</option>' +
-                   '<option value="delete"' + (data.action === 'delete' ? ' selected' : '') + '>Delete Post</option>' +
-                   '</select>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Post Title</label>' +
-                   '<input type="text" name="post_title" value="' + (data.post_title || '') + '">' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Post Content</label>' +
-                   '<textarea name="post_content" rows="5">' + (data.post_content || '') + '</textarea>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Post Status</label>' +
-                   '<select name="post_status">' +
-                   '<option value="draft"' + (data.post_status === 'draft' ? ' selected' : '') + '>Draft</option>' +
-                   '<option value="publish"' + (data.post_status === 'publish' ? ' selected' : '') + '>Published</option>' +
-                   '<option value="private"' + (data.post_status === 'private' ? ' selected' : '') + '>Private</option>' +
-                   '</select>' +
-                   '</div>';
-        },
-
-        getFilterFields: function(node) {
-            var data = node.data || {};
-            return '<div class="wa-form-group">' +
-                   '<label>Filter Condition</label>' +
-                   '<select name="operator">' +
-                   '<option value="equals"' + (data.operator === 'equals' ? ' selected' : '') + '>Equals</option>' +
-                   '<option value="not_equals"' + (data.operator === 'not_equals' ? ' selected' : '') + '>Not Equals</option>' +
-                   '<option value="contains"' + (data.operator === 'contains' ? ' selected' : '') + '>Contains</option>' +
-                   '<option value="greater_than"' + (data.operator === 'greater_than' ? ' selected' : '') + '>Greater Than</option>' +
-                   '<option value="less_than"' + (data.operator === 'less_than' ? ' selected' : '') + '>Less Than</option>' +
-                   '</select>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Field</label>' +
-                   '<input type="text" name="field" value="' + (data.field || '') + '" placeholder="{{data.field}}">' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Value</label>' +
-                   '<input type="text" name="value" value="' + (data.value || '') + '">' +
-                   '</div>';
-        },
-
-        getCodeFields: function(node) {
-            var data = node.data || {};
-            return '<div class="wa-form-group">' +
-                   '<label>Language</label>' +
-                   '<select name="language">' +
-                   '<option value="php"' + (data.language === 'php' ? ' selected' : '') + '>PHP</option>' +
-                   '<option value="javascript"' + (data.language === 'javascript' ? ' selected' : '') + '>JavaScript</option>' +
-                   '</select>' +
-                   '</div>' +
-                   '<div class="wa-form-group">' +
-                   '<label>Code</label>' +
-                   '<textarea name="code" rows="10" style="font-family: monospace;">' + (data.code || '') + '</textarea>' +
-                   '<p class="description">Access input data via $input variable</p>' +
-                   '</div>';
+            $('#wa-node-config-fields').html(html);
         },
 
         saveNodeConfiguration: function() {
-            var nodeId = $('#wa-node-config-fields').data('node-id');
-            var node = this.nodes.find(function(n) { return n.id === nodeId; });
+            var self = this;
             
-            if (!node) return;
+            if (!this.selectedNode) return;
             
-            // Collect form data
+            // Get form data
             var formData = {};
             $('#wa-node-config-form').find('input, select, textarea').each(function() {
-                var name = $(this).attr('name');
-                if (name) {
-                    formData[name] = $(this).val();
-                }
+                formData[$(this).attr('name')] = $(this).val();
             });
             
-            node.data = formData;
-            this.markDirty();
+            // Update node data
+            this.selectedNode.data = formData;
             
+            // Close modal
             $('#wa-node-config-modal').hide();
+            
+            // Mark as dirty
+            this.markDirty();
         },
 
         deleteNode: function(nodeId) {
@@ -575,18 +457,18 @@
                 return;
             }
             
-            // Remove node from array
-            this.nodes = this.nodes.filter(function(n) { return n.id !== nodeId; });
-            
-            // Remove connections
-            this.connections = this.connections.filter(function(c) {
-                return c.source !== nodeId && c.target !== nodeId;
+            // Remove from nodes array
+            this.nodes = this.nodes.filter(function(node) {
+                return node.id !== nodeId;
             });
             
             // Remove from DOM
             $('#' + nodeId).remove();
             
-            // Clear properties if this was selected
+            // Remove connections
+            this.removeNodeConnections(nodeId);
+            
+            // Clear selection if this was selected
             if (this.selectedNode && this.selectedNode.id === nodeId) {
                 this.selectedNode = null;
                 $('#wa-properties-content').html('<div class="wa-empty-properties"><p>Select a node to view its properties</p></div>');
@@ -596,13 +478,48 @@
         },
 
         updateConnections: function(nodeId) {
-            // Update visual connections when node is moved
-            // This would update SVG paths in a full implementation
+            // Update connection lines when node is moved
+            // This would update SVG paths or similar
+        },
+
+        removeNodeConnections: function(nodeId) {
+            // Remove connections to/from this node
+            this.connections = this.connections.filter(function(conn) {
+                return conn.source !== nodeId && conn.target !== nodeId;
+            });
+        },
+
+        toggleCategory: function($title) {
+            $title.toggleClass('expanded');
+            $title.next('.wa-category-nodes').slideToggle(200);
+        },
+
+        filterNodes: function(searchTerm) {
+            var term = searchTerm.toLowerCase();
+            
+            $('.wa-draggable-node').each(function() {
+                var label = $(this).text().toLowerCase();
+                if (label.indexOf(term) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+            
+            // Show all categories that have visible nodes
+            $('.wa-node-category').each(function() {
+                var hasVisibleNodes = $(this).find('.wa-draggable-node:visible').length > 0;
+                if (hasVisibleNodes) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
         },
 
         editWorkflowName: function() {
             var currentName = $('#wa-workflow-name').text();
-            var newName = prompt('Enter new workflow name:', currentName);
+            var newName = prompt('Enter workflow name:', currentName);
             
             if (newName && newName !== currentName) {
                 $('#wa-workflow-name').text(newName);
@@ -611,9 +528,9 @@
             }
         },
 
-        toggleWorkflowStatus: function(active) {
-            this.workflow.status = active ? 'active' : 'inactive';
-            $('.wa-status-label').text(active ? wa_builder.i18n.active : wa_builder.i18n.inactive);
+        toggleWorkflowStatus: function(isActive) {
+            this.workflow.status = isActive ? 'active' : 'inactive';
+            $('.wa-status-label').text(isActive ? wa_builder.i18n.active : wa_builder.i18n.inactive);
             this.markDirty();
         },
 
@@ -621,82 +538,75 @@
             var self = this;
             var $button = $('#wa-save-workflow');
             
-            $button.prop('disabled', true).text(wa_builder.i18n.saving);
-            $('.wa-save-indicator').addClass('saving');
+            $button.prop('disabled', true).html('<span class="dashicons dashicons-update-alt"></span> ' + wa_builder.i18n.saving);
             
-            var data = {
+            // Prepare workflow data
+            var workflowData = {
                 name: this.workflow.name,
-                status: this.workflow.status,
-                nodes: this.nodes,
-                connections: this.connections
+                status: this.workflow.status || 'draft',
+                flow_data: {
+                    nodes: this.nodes.map(function(node) {
+                        return {
+                            node_id: node.id,
+                            node_type: node.type,
+                            settings: JSON.stringify(node.data),
+                            position_x: node.position.x,
+                            position_y: node.position.y
+                        };
+                    }),
+                    edges: this.connections
+                }
             };
             
+            // Save via API
             $.ajax({
                 url: wa_builder.api_url + '/workflows/' + this.workflow.id,
                 method: 'PUT',
                 beforeSend: function(xhr) {
                     xhr.setRequestHeader('X-WP-Nonce', wa_builder.nonce);
                 },
-                data: JSON.stringify(data),
+                data: JSON.stringify(workflowData),
                 contentType: 'application/json',
-                success: function() {
+                success: function(response) {
                     self.isDirty = false;
-                    $('.wa-save-message').text(wa_builder.i18n.saved);
-                    $button.text(wa_builder.i18n.save);
-                    
-                    setTimeout(function() {
-                        $('.wa-save-message').text('All changes saved');
-                    }, 2000);
+                    self.showSaveSuccess();
+                    $button.prop('disabled', false).html('<span class="dashicons dashicons-yes"></span> ' + wa_builder.i18n.save);
                 },
                 error: function() {
                     alert(wa_builder.i18n.save_failed);
-                    $button.text(wa_builder.i18n.save);
-                },
-                complete: function() {
-                    $button.prop('disabled', false);
-                    $('.wa-save-indicator').removeClass('saving');
+                    $button.prop('disabled', false).html('<span class="dashicons dashicons-yes"></span> ' + wa_builder.i18n.save);
                 }
             });
         },
 
+        showSaveSuccess: function() {
+            $('.wa-save-indicator').removeClass('saving');
+            $('.wa-save-message').text(wa_builder.i18n.saved);
+            
+            setTimeout(function() {
+                $('.wa-save-message').text('All changes saved');
+            }, 2000);
+        },
+
         markDirty: function() {
             this.isDirty = true;
+            $('.wa-save-indicator').addClass('saving');
             $('.wa-save-message').text('Unsaved changes');
             
             // Reset auto-save timer
             if (this.autoSaveTimer) {
                 clearTimeout(this.autoSaveTimer);
-                this.startAutoSave();
+            }
+            
+            if (wa_builder.auto_save) {
+                this.autoSaveTimer = setTimeout(function() {
+                    this.saveWorkflow();
+                }.bind(this), wa_builder.auto_save_interval * 1000);
             }
         },
 
         startAutoSave: function() {
-            var self = this;
-            var interval = (wa_builder.auto_save_interval || 2) * 1000;
-            
-            this.autoSaveTimer = setTimeout(function() {
-                if (self.isDirty) {
-                    self.saveWorkflow();
-                }
-            }, interval);
-        },
-
-        filterNodes: function(searchTerm) {
-            searchTerm = searchTerm.toLowerCase();
-            
-            $('.wa-draggable-node').each(function() {
-                var label = $(this).text().toLowerCase();
-                if (label.indexOf(searchTerm) > -1) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        },
-
-        toggleCategory: function($title) {
-            $title.toggleClass('expanded');
-            $title.next('.wa-category-nodes').slideToggle();
+            // Auto-save is triggered by markDirty()
         },
 
         showTestModal: function() {
@@ -706,168 +616,65 @@
         runTest: function() {
             var self = this;
             var $button = $('#wa-run-test');
-            var triggerType = $('#test-trigger-type').val();
-            var testData = $('#test-data').val();
-            
-            try {
-                testData = JSON.parse(testData);
-            } catch(e) {
-                alert('Invalid JSON data');
-                return;
-            }
             
             $button.prop('disabled', true).text('Running...');
             
+            var testData = {
+                trigger_type: $('#test-trigger-type').val(),
+                trigger_data: JSON.parse($('#test-data').val() || '{}')
+            };
+            
+            // Execute workflow
             $.ajax({
-                url: wa_builder.api_url + '/workflows/' + this.workflow.id + '/test',
+                url: wa_builder.api_url + '/workflows/' + this.workflow.id + '/execute',
                 method: 'POST',
                 beforeSend: function(xhr) {
                     xhr.setRequestHeader('X-WP-Nonce', wa_builder.nonce);
                 },
-                data: JSON.stringify({
-                    trigger_type: triggerType,
-                    trigger_data: testData
-                }),
+                data: JSON.stringify(testData),
                 contentType: 'application/json',
                 success: function(response) {
-                    alert('Test completed successfully. Check the executions page for details.');
+                    alert('Workflow executed successfully. Check execution history for details.');
                     $('#wa-test-modal').hide();
+                    $button.prop('disabled', false).text('Run Test');
                 },
-                error: function(xhr) {
-                    var message = 'Test failed';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        message += ': ' + xhr.responseJSON.message;
-                    }
-                    alert(message);
-                },
-                complete: function() {
+                error: function() {
+                    alert('Failed to execute workflow.');
                     $button.prop('disabled', false).text('Run Test');
                 }
             });
         },
 
+        // Canvas control methods
         zoomIn: function() {
-            // Zoom functionality would be implemented with transform scale
+            // Implement zoom in
             console.log('Zoom in');
         },
 
         zoomOut: function() {
-            // Zoom functionality would be implemented with transform scale
+            // Implement zoom out
             console.log('Zoom out');
         },
 
         fitView: function() {
-            // Fit all nodes in view
+            // Implement fit view
             console.log('Fit view');
         },
 
         centerView: function() {
-            // Center the canvas
+            // Implement center view
             console.log('Center view');
-        },
-
-        loadNodes: function(nodes) {
-            // Load existing nodes from database
-            var self = this;
-            nodes.forEach(function(node) {
-                self.nodes.push(node);
-                self.renderNode(node);
-            });
         }
     };
 
-    // Initialize on document ready
+    // Initialize when document is ready
     $(document).ready(function() {
-        // Only initialize if we're on the workflow builder page
         if ($('#wa-workflow-canvas').length > 0) {
             WorkflowBuilder.init();
         }
     });
 
+    // Expose globally for debugging
+    window.WorkflowBuilder = WorkflowBuilder;
+
 })(jQuery);
-
-// Add basic styles for workflow nodes
-var style = document.createElement('style');
-style.textContent = `
-.wa-workflow-node {
-    position: absolute;
-    background: #fff;
-    border: 2px solid #ddd;
-    border-radius: 4px;
-    min-width: 180px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.wa-workflow-node.selected {
-    border-color: #0073aa;
-    box-shadow: 0 2px 8px rgba(0,115,170,0.3);
-}
-
-.wa-node-header {
-    padding: 10px;
-    color: #fff;
-    border-radius: 2px 2px 0 0;
-    cursor: move;
-    display: flex;
-    align-items: center;
-}
-
-.wa-node-header .dashicons {
-    margin-right: 8px;
-}
-
-.wa-node-label {
-    flex: 1;
-    font-weight: 600;
-}
-
-.wa-node-delete {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 0;
-    margin-left: 10px;
-    opacity: 0.7;
-}
-
-.wa-node-delete:hover {
-    opacity: 1;
-}
-
-.wa-node-body {
-    padding: 10px;
-    position: relative;
-}
-
-.wa-node-ports {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 100%;
-}
-
-.wa-node-port {
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    background: #fff;
-    border: 2px solid #0073aa;
-    border-radius: 50%;
-    cursor: crosshair;
-}
-
-.wa-port-in {
-    left: -8px;
-}
-
-.wa-port-out {
-    right: -8px;
-}
-
-.wa-node-port:hover {
-    background: #0073aa;
-}
-`;
-document.head.appendChild(style);

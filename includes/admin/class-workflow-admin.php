@@ -140,10 +140,15 @@ class Workflow_Admin {
             );
             
             // Enqueue workflow builder scripts if on builder page
-            if (strpos($screen->id, 'workflow-builder') !== false) {
+            if (strpos($screen->id, 'workflow-builder') !== false || 
+                (isset($_GET['page']) && $_GET['page'] === 'workflow-automation-builder')) {
                 // jQuery UI for drag and drop
                 wp_enqueue_script('jquery-ui-draggable');
                 wp_enqueue_script('jquery-ui-droppable');
+                wp_enqueue_script('jquery-ui-sortable');
+                
+                // jQuery UI styles
+                wp_enqueue_style('jquery-ui', 'https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
                 
                 // Workflow builder script
                 wp_enqueue_script(

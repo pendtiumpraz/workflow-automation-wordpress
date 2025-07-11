@@ -495,10 +495,27 @@ jQuery(document).ready(function($) {
     $('#wa-save-integration').on('click', function() {
         var $button = $(this);
         var formData = $('#wa-integration-form').serializeArray();
-        var data = {};
+        
+        // Prepare data in the correct format
+        var data = {
+            integration_type: '',
+            name: '',
+            settings: {},
+            is_active: true
+        };
         
         formData.forEach(function(field) {
-            data[field.name] = field.value;
+            if (field.name === 'integration_type') {
+                data.integration_type = field.value;
+            } else if (field.name === 'name') {
+                data.name = field.value;
+            } else if (field.name.startsWith('settings[')) {
+                // Extract setting name from settings[key]
+                var match = field.name.match(/settings\[(.*?)\]/);
+                if (match) {
+                    data.settings[match[1]] = field.value;
+                }
+            }
         });
         
         $button.prop('disabled', true).text('<?php esc_attr_e('Saving...', 'workflow-automation'); ?>');
@@ -516,7 +533,12 @@ jQuery(document).ready(function($) {
                 location.reload();
             },
             error: function(xhr) {
-                alert('<?php esc_attr_e('Failed to save integration. Please try again.', 'workflow-automation'); ?>');
+                console.error('Integration save error:', xhr.responseJSON);
+                var message = '<?php esc_attr_e('Failed to save integration. Please try again.', 'workflow-automation'); ?>';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                alert(message);
                 $button.prop('disabled', false).text('<?php esc_attr_e('Save Integration', 'workflow-automation'); ?>');
             }
         });
