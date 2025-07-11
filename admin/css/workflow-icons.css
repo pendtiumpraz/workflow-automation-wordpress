@@ -1,0 +1,254 @@
+/**
+ * Workflow Automation Icon Styles
+ *
+ * @link       https://opsguide.com
+ * @since      1.0.0
+ *
+ * @package    Workflow_Automation
+ * @subpackage Workflow_Automation/admin/css
+ */
+
+/* Node Icons */
+.wa-node-icon {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.wa-node-icon svg {
+    display: block;
+}
+
+/* Node Type List */
+.wa-node-types {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.wa-node-type-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.wa-node-type-card:hover {
+    border-color: #0073aa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.wa-node-type-card.selected {
+    border-color: #0073aa;
+    background: #f0f8ff;
+}
+
+.wa-node-type-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.wa-node-type-icon {
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.wa-node-type-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin: 0;
+}
+
+.wa-node-type-description {
+    font-size: 13px;
+    color: #666;
+    margin: 0;
+}
+
+.wa-node-type-category {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #999;
+}
+
+/* Category Tabs */
+.wa-category-tabs {
+    display: flex;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 20px;
+}
+
+.wa-category-tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.wa-category-tab:hover {
+    background: #f5f5f5;
+}
+
+.wa-category-tab.active {
+    border-bottom-color: #0073aa;
+    color: #0073aa;
+}
+
+.wa-category-tab .dashicons {
+    margin-right: 5px;
+}
+
+/* Node Icons in Workflow Builder */
+.wa-workflow-node {
+    position: relative;
+}
+
+.wa-workflow-node-icon {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 24px;
+    height: 24px;
+}
+
+.wa-workflow-node-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Icon Colors */
+.wa-icon-trigger { color: #4CAF50; }
+.wa-icon-action { color: #2196F3; }
+.wa-icon-logic { color: #9C27B0; }
+.wa-icon-data { color: #FF9800; }
+.wa-icon-wordpress { color: #21759B; }
+
+/* Integration Icons */
+.wa-integration-icon {
+    width: 32px;
+    height: 32px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
+.wa-integration-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.wa-integration-item {
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.wa-integration-item:hover {
+    border-color: #0073aa;
+}
+
+.wa-integration-status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.wa-integration-status .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.wa-integration-status.active {
+    color: #46b450;
+}
+
+.wa-integration-status.inactive {
+    color: #dc3232;
+}
+
+/* Node Palette */
+.wa-node-palette {
+    background: #f1f1f1;
+    border: 1px solid #ddd;
+    padding: 15px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.wa-node-palette-category {
+    margin-bottom: 20px;
+}
+
+.wa-node-palette-category-title {
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.wa-node-palette-category-title .dashicons {
+    margin-right: 5px;
+}
+
+.wa-node-palette-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+}
+
+.wa-node-palette-item {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 10px;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.wa-node-palette-item:hover {
+    border-color: #0073aa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.wa-node-palette-item-icon {
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.wa-node-palette-item-label {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+    .wa-node-types {
+        grid-template-columns: 1fr;
+    }
+    
+    .wa-category-tabs {
+        flex-wrap: wrap;
+    }
+    
+    .wa-node-palette-items {
+        grid-template-columns: 1fr;
+    }
+}
