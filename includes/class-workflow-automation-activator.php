@@ -165,18 +165,10 @@ class Workflow_Automation_Activator {
      * @since    1.0.0
      */
     private static function create_rewrite_rules() {
-        // Add rewrite rule for webhook endpoints
-        add_rewrite_rule(
-            '^wa-webhook/([a-zA-Z0-9]+)/?',
-            'index.php?wa_webhook=$matches[1]',
-            'top'
-        );
-        
-        // Add query vars
-        add_filter('query_vars', function($vars) {
-            $vars[] = 'wa_webhook';
-            return $vars;
-        });
+        // Load webhook handler to register its rewrite rules
+        require_once WA_PLUGIN_DIR . 'includes/class-webhook-handler.php';
+        $webhook_handler = new Webhook_Handler();
+        $webhook_handler->add_rewrite_rules();
         
         // Flush rewrite rules
         flush_rewrite_rules();

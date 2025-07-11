@@ -10,7 +10,9 @@
  */
 
 /**
- * Webhook start node class
+ * Webhook Start Node class
+ *
+ * Handles webhook trigger nodes
  *
  * @package    Workflow_Automation
  * @subpackage Workflow_Automation/includes/nodes/webhook
@@ -52,7 +54,31 @@ class WA_Webhook_Start_Node extends WA_Abstract_Node {
      * @return   array
      */
     public function get_settings_fields() {
+        $webhook_key = $this->get_setting('webhook_key', '');
+        $webhook_url = '';
+        
+        if (!empty($webhook_key)) {
+            $webhook_url = Webhook_Handler::get_webhook_url($webhook_key);
+        }
+        
         return array(
+            array(
+                'key' => 'webhook_key',
+                'label' => __('Webhook Key', 'workflow-automation'),
+                'type' => 'text',
+                'default' => $webhook_key,
+                'readonly' => true,
+                'description' => __('Unique key for this webhook (auto-generated)', 'workflow-automation')
+            ),
+            array(
+                'key' => 'webhook_url',
+                'label' => __('Webhook URL', 'workflow-automation'),
+                'type' => 'text',
+                'default' => $webhook_url,
+                'readonly' => true,
+                'description' => __('Send webhooks to this URL', 'workflow-automation'),
+                'help_text' => !empty($webhook_url) ? sprintf(__('Copy this URL: %s', 'workflow-automation'), $webhook_url) : ''
+            ),
             array(
                 'key' => 'method',
                 'label' => __('HTTP Method', 'workflow-automation'),
@@ -128,13 +154,27 @@ class WA_Webhook_Start_Node extends WA_Abstract_Node {
      * @return   mixed
      */
     public function execute($context, $previous_data) {
-        // For webhook start nodes, the data comes from the trigger
-        if (!isset($context['trigger']) || $context['trigger']['trigger_type'] !== 'webhook') {
-            throw new Exception('Invalid trigger type for webhook start node');
+        // Generate webhook key if not set
+        $webhook_key = $this->get_setting('webhook_key', '');
+        if (empty($webhook_key)) {
+            $webhook_key = Webhook_Handler::generate_webhook_key();
+            $this->settings['webhook_key'] = $webhook_key;
+            
+            // Save the webhook key back to the node
+            $node_model = new Node_Model();
+            $node = $node_model->get_by_id($this->id);
+            if ($node) {
+                $settings = json_decode($node->settings, true);
+                $settings['webhook_key'] = $webhook_key;
+                $node_model->update($node->id, array(
+                    'settings' => json_encode($settings)
+                ));
+            }
         }
         
-        $trigger_data = $context['trigger'];
-        $webhook_data = isset($trigger_data['trigger_data']) ? $trigger_data['trigger_data'] : array();
+        // For webhook start nodes, the data comes from the trigger
+        $trigger_data = isset($context['trigger']) ? $context['trigger'] : array();
+        $webhook_data = $trigger_data;
         
         // Validate method if specified
         $allowed_method = $this->get_setting('method', 'any');
@@ -161,7 +201,7 @@ class WA_Webhook_Start_Node extends WA_Abstract_Node {
                     break;
                     
                 case 'query':
-                    $params = isset($webhook_data['params']) ? $webhook_data['params'] : array();
+                    $params = isset($webhook_data['query_params']) ? $webhook_data['query_params'] : array();
                     $received_token = isset($params['token']) ? $params['token'] : '';
                     break;
                     
@@ -180,12 +220,15 @@ class WA_Webhook_Start_Node extends WA_Abstract_Node {
         
         // Return webhook data for next nodes
         $output = array(
+            'webhook_key' => $webhook_key,
+            'webhook_url' => Webhook_Handler::get_webhook_url($webhook_key),
             'method' => isset($webhook_data['method']) ? $webhook_data['method'] : 'unknown',
             'headers' => isset($webhook_data['headers']) ? $webhook_data['headers'] : array(),
-            'params' => isset($webhook_data['params']) ? $webhook_data['params'] : array(),
+            'params' => isset($webhook_data['query_params']) ? $webhook_data['query_params'] : array(),
             'body' => isset($webhook_data['body']) ? $webhook_data['body'] : null,
-            'webhook_key' => isset($webhook_data['webhook_key']) ? $webhook_data['webhook_key'] : '',
-            'received_at' => current_time('mysql')
+            'raw_body' => isset($webhook_data['raw_body']) ? $webhook_data['raw_body'] : '',
+            'timestamp' => isset($webhook_data['timestamp']) ? $webhook_data['timestamp'] : current_time('mysql'),
+            'ip_address' => isset($webhook_data['ip_address']) ? $webhook_data['ip_address'] : ''
         );
         
         $this->log('Webhook start node executed successfully');
@@ -204,16 +247,17 @@ class WA_Webhook_Start_Node extends WA_Abstract_Node {
     public function get_webhook_url($workflow_id, $node_id) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'wa_webhooks';
-        $webhook = $wpdb->get_row($wpdb->prepare(
-            "SELECT webhook_key FROM {$table_name} WHERE workflow_id = %d AND node_id = %s",
-            $workflow_id,
-            $node_id
-        ));
+        // Get node settings to find webhook key
+        $node_model = new Node_Model();
+        $nodes = $node_model->get_by_workflow($workflow_id);
         
-        if ($webhook && $webhook->webhook_key) {
-            $webhook_model = new Webhook_Model();
-            return $webhook_model->get_webhook_url($webhook->webhook_key);
+        foreach ($nodes as $node) {
+            if ($node->node_id === $node_id) {
+                $settings = json_decode($node->settings, true);
+                if (!empty($settings['webhook_key'])) {
+                    return Webhook_Handler::get_webhook_url($settings['webhook_key']);
+                }
+            }
         }
         
         return null;

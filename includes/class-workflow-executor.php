@@ -188,6 +188,42 @@ class Workflow_Executor {
     }
 
     /**
+     * Execute a workflow from webhook trigger
+     *
+     * @since    1.0.0
+     * @param    int       $workflow_id    The workflow ID
+     * @param    array     $trigger_data   The trigger data
+     * @param    string    $trigger_type   The trigger type
+     * @return   array
+     */
+    public function execute_webhook($workflow_id, $trigger_data, $trigger_type = 'webhook') {
+        // Create execution record
+        $execution_model = new Execution_Model();
+        $execution_id = $execution_model->create(array(
+            'workflow_id' => $workflow_id,
+            'status' => 'pending',
+            'trigger_type' => $trigger_type,
+            'trigger_data' => json_encode($trigger_data),
+            'created_at' => current_time('mysql')
+        ));
+        
+        if (!$execution_id) {
+            return array(
+                'success' => false,
+                'error' => 'Failed to create execution record'
+            );
+        }
+        
+        // Execute the workflow
+        $success = $this->execute($execution_id);
+        
+        return array(
+            'success' => $success,
+            'execution_id' => $execution_id
+        );
+    }
+
+    /**
      * Execute a workflow
      *
      * @since    1.0.0
@@ -221,8 +257,13 @@ class Workflow_Executor {
             }
             
             // Initialize context with trigger data
+            $trigger_data = json_decode($execution->trigger_data, true);
+            if ($trigger_data === null) {
+                $trigger_data = array();
+            }
+            
             $this->context = array(
-                'trigger' => $execution->trigger_data,
+                'trigger' => $trigger_data,
                 'workflow_id' => $workflow->id,
                 'execution_id' => $execution_id,
                 'variables' => array(),
