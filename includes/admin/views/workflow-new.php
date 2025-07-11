@@ -127,17 +127,23 @@ jQuery(document).ready(function($) {
             template: $('#workflow-template').val()
         };
         
-        // Create workflow via API
-        wp.api.loadPromise.done(function() {
-            var workflow = new wp.api.models.Workflow(data);
-            
-            workflow.save().done(function(response) {
+        // Create workflow via AJAX
+        $.ajax({
+            url: wa_admin.api_url + '/workflows',
+            method: 'POST',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', wa_admin.nonce);
+            },
+            data: JSON.stringify(data),
+            contentType: 'application/json',
+            success: function(response) {
                 // Redirect to workflow builder
                 window.location.href = '<?php echo admin_url('admin.php?page=workflow-automation-builder&workflow='); ?>' + response.id;
-            }).fail(function(xhr) {
+            },
+            error: function(xhr) {
                 alert('<?php esc_attr_e('Failed to create workflow. Please try again.', 'workflow-automation'); ?>');
                 $submitButton.prop('disabled', false).text('<?php esc_attr_e('Create Workflow', 'workflow-automation'); ?>');
-            });
+            }
         });
     });
 });

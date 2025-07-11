@@ -87,6 +87,9 @@ class Workflow_Automation {
      * @access   private
      */
     private function load_dependencies() {
+        // Load helper functions
+        require_once WA_PLUGIN_DIR . 'includes/functions.php';
+        
         // The class responsible for orchestrating the actions and filters of the core plugin.
         require_once WA_PLUGIN_DIR . 'includes/class-workflow-automation-loader.php';
 
@@ -106,6 +109,7 @@ class Workflow_Automation {
         // Load model classes
         require_once WA_PLUGIN_DIR . 'includes/models/class-workflow-model.php';
         require_once WA_PLUGIN_DIR . 'includes/models/class-node-model.php';
+        require_once WA_PLUGIN_DIR . 'includes/models/class-node-connection-model.php';
         require_once WA_PLUGIN_DIR . 'includes/models/class-execution-model.php';
         require_once WA_PLUGIN_DIR . 'includes/models/class-webhook-model.php';
         require_once WA_PLUGIN_DIR . 'includes/models/class-integration-settings-model.php';
@@ -121,6 +125,9 @@ class Workflow_Automation {
         
         // Load webhook handler
         require_once WA_PLUGIN_DIR . 'includes/class-webhook-handler.php';
+        
+        // Load workflow templates
+        require_once WA_PLUGIN_DIR . 'includes/class-workflow-templates.php';
 
         $this->loader = new Workflow_Automation_Loader();
     }

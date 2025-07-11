@@ -68,11 +68,9 @@ if (!defined('WPINC')) {
                             <?php endif; ?>
                         </td>
                         <td class="column-status">
-                            <?php if ($workflow->status === 'active') : ?>
-                                <span class="wa-status wa-status-active"><?php _e('Active', 'workflow-automation'); ?></span>
-                            <?php else : ?>
-                                <span class="wa-status wa-status-inactive"><?php _e('Inactive', 'workflow-automation'); ?></span>
-                            <?php endif; ?>
+                            <span class="workflow-status <?php echo esc_attr($workflow->status); ?>">
+                                <?php echo esc_html(ucfirst($workflow->status)); ?>
+                            </span>
                         </td>
                         <td class="column-executions">
                             <?php echo number_format_i18n($stats->total_executions); ?>

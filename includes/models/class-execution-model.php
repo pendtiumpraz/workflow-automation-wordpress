@@ -223,4 +223,37 @@ class Execution_Model {
         
         return $wpdb->query($sql);
     }
+    
+    /**
+     * Get workflow execution statistics
+     *
+     * @since    1.0.0
+     * @param    int    $workflow_id    The workflow ID
+     * @return   object
+     */
+    public function get_workflow_stats($workflow_id) {
+        global $wpdb;
+        
+        $stats = new stdClass();
+        
+        // Get total executions
+        $stats->total_executions = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->table_name} WHERE workflow_id = %d",
+            $workflow_id
+        ));
+        
+        // Get failed executions
+        $stats->failed_executions = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->table_name} WHERE workflow_id = %d AND status = 'failed'",
+            $workflow_id
+        ));
+        
+        // Get last execution time
+        $stats->last_execution = $wpdb->get_var($wpdb->prepare(
+            "SELECT started_at FROM {$this->table_name} WHERE workflow_id = %d ORDER BY started_at DESC LIMIT 1",
+            $workflow_id
+        ));
+        
+        return $stats;
+    }
 }

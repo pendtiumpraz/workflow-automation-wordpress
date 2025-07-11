@@ -143,7 +143,7 @@ class Workflow_Model {
         
         // Encode flow_data as JSON
         if (is_array($data['flow_data'])) {
-            $data['flow_data'] = json_encode($data['flow_data']);
+            $data['flow_data'] = wp_json_encode($data['flow_data']);
         }
         
         $result = $wpdb->insert(
