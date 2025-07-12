@@ -404,8 +404,24 @@
             
             console.log('showNodeConfiguration called for node:', node);
             
-            $('#wa-node-config-title').text('Configure ' + node.label);
-            $('#wa-node-config-modal').show();
+            // Check if modal exists
+            var modal = $('#wa-node-config-modal');
+            console.log('Modal found:', modal.length > 0);
+            
+            // Set title
+            var title = $('#wa-node-config-title');
+            console.log('Title element found:', title.length > 0);
+            if (title.length > 0) {
+                title.text('Configure ' + node.label);
+            }
+            
+            // Show modal
+            if (modal.length > 0) {
+                modal.show();
+                console.log('Modal should be visible now');
+            } else {
+                console.error('Modal not found!');
+            }
             
             // Load node configuration fields
             this.loadNodeConfigFields(node);
@@ -418,9 +434,25 @@
             console.log('Node object:', node);
             console.log('wa_builder object:', wa_builder);
             
+            // Debug: Check if element exists
+            var configFieldsElement = $('#wa-node-config-fields');
+            console.log('Config fields element found:', configFieldsElement.length > 0);
+            console.log('Config fields element:', configFieldsElement);
+            
             // Show loading message and test button
-            $('#wa-node-config-fields').html('<p>Loading configuration fields...</p>' +
-                '<button onclick="WorkflowBuilder.testAPI(\'' + node.type + '\')">Test API Manually</button>');
+            if (configFieldsElement.length > 0) {
+                configFieldsElement.html('<p>Loading configuration fields...</p>' +
+                    '<button onclick="WorkflowBuilder.testAPI(\'' + node.type + '\')">Test API Manually</button>');
+            } else {
+                console.error('Could not find #wa-node-config-fields element!');
+                // Try to find modal body and add content there
+                var modalBody = $('.wa-modal-body');
+                console.log('Modal body found:', modalBody.length > 0);
+                if (modalBody.length > 0) {
+                    modalBody.html('<div id="wa-node-config-fields"><p>Loading configuration fields...</p>' +
+                        '<button onclick="WorkflowBuilder.testAPI(\'' + node.type + '\')">Test API Manually</button></div>');
+                }
+            }
             
             // Get node configuration schema via API
             $.ajax({
@@ -440,7 +472,20 @@
                         responseText: xhr.responseText,
                         error: error
                     });
-                    $('#wa-node-config-fields').html('<p>Failed to load configuration fields. Check console for details.</p>');
+                    var errorHtml = '<div style="color: red; padding: 20px;">' +
+                        '<p><strong>Failed to load configuration fields.</strong></p>' +
+                        '<p>Status: ' + xhr.status + ' ' + xhr.statusText + '</p>' +
+                        '<p>Error: ' + error + '</p>' +
+                        '<p>Check browser console for details.</p>' +
+                        '<button onclick="WorkflowBuilder.testAPI(\'' + node.type + '\')">Test API Manually</button>' +
+                        '</div>';
+                    
+                    var configFields = $('#wa-node-config-fields');
+                    if (configFields.length > 0) {
+                        configFields.html(errorHtml);
+                    } else {
+                        $('.wa-modal-body').html('<div id="wa-node-config-fields">' + errorHtml + '</div>');
+                    }
                 }
             });
         },
