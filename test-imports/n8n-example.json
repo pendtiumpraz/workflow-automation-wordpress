@@ -1,0 +1,73 @@
+{
+  "name": "Example n8n Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "test-webhook"
+      },
+      "id": "a5d4b3c2-1234-5678-9abc-def012345678",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chatCompletion",
+        "model": "gpt-3.5-turbo",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "content": "={{ $json[\"message\"] }}"
+            }
+          ]
+        }
+      },
+      "id": "b6e5c4d3-2345-6789-abcd-ef0123456789",
+      "name": "OpenAI",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#general",
+        "text": "AI Response: {{ $json[\"choices\"][0][\"message\"][\"content\"] }}"
+      },
+      "id": "c7f6d5e4-3456-789a-bcde-f01234567890",
+      "name": "Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "id": null
+}

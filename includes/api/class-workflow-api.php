@@ -144,6 +144,53 @@ class Workflow_API {
                 ),
             ),
         ));
+
+        // GET /workflows/{id}/export
+        register_rest_route($this->namespace, '/workflows/(?P<id>\d+)/export', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'export_workflow'),
+                'permission_callback' => array($this, 'check_read_permission'),
+                'args' => array(
+                    'id' => array(
+                        'validate_callback' => function($param, $request, $key) {
+                            return is_numeric($param);
+                        }
+                    ),
+                    'format' => array(
+                        'default' => 'native',
+                        'sanitize_callback' => 'sanitize_text_field',
+                        'validate_callback' => function($param, $request, $key) {
+                            return in_array($param, array('native', 'n8n', 'make'));
+                        }
+                    ),
+                ),
+            ),
+        ));
+
+        // POST /workflows/import
+        register_rest_route($this->namespace, '/workflows/import', array(
+            array(
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => array($this, 'import_workflow'),
+                'permission_callback' => array($this, 'check_write_permission'),
+                'args' => array(
+                    'format' => array(
+                        'required' => true,
+                        'sanitize_callback' => 'sanitize_text_field',
+                        'validate_callback' => function($param, $request, $key) {
+                            return in_array($param, array('native', 'n8n', 'make'));
+                        }
+                    ),
+                    'data' => array(
+                        'required' => true,
+                        'validate_callback' => function($param, $request, $key) {
+                            return is_array($param);
+                        }
+                    ),
+                ),
+            ),
+        ));
     }
 
     /**
@@ -353,5 +400,64 @@ class Workflow_API {
         }
         
         return true;
+    }
+
+    /**
+     * Export workflow
+     *
+     * @since    1.0.0
+     * @param    WP_REST_Request    $request    The REST request
+     * @return   WP_REST_Response|WP_Error
+     */
+    public function export_workflow($request) {
+        $id = $request->get_param('id');
+        $format = $request->get_param('format');
+        
+        // Check if workflow exists
+        $workflow_model = new Workflow_Model();
+        $workflow = $workflow_model->get($id);
+        if (!$workflow) {
+            return new WP_Error('not_found', __('Workflow not found', 'workflow-automation'), array('status' => 404));
+        }
+        
+        // Load import/export handler
+        require_once plugin_dir_path(dirname(__FILE__)) . 'class-workflow-import-export.php';
+        $import_export = new Workflow_Import_Export();
+        
+        $export_data = $import_export->export_workflow($id, $format);
+        
+        if (is_wp_error($export_data)) {
+            return $export_data;
+        }
+        
+        return new WP_REST_Response($export_data);
+    }
+
+    /**
+     * Import workflow
+     *
+     * @since    1.0.0
+     * @param    WP_REST_Request    $request    The REST request
+     * @return   WP_REST_Response|WP_Error
+     */
+    public function import_workflow($request) {
+        $format = $request->get_param('format');
+        $data = $request->get_param('data');
+        
+        // Load import/export handler
+        require_once plugin_dir_path(dirname(__FILE__)) . 'class-workflow-import-export.php';
+        $import_export = new Workflow_Import_Export();
+        
+        $workflow_id = $import_export->import_workflow($data, $format);
+        
+        if (is_wp_error($workflow_id)) {
+            return $workflow_id;
+        }
+        
+        // Get the imported workflow
+        $workflow_model = new Workflow_Model();
+        $workflow = $workflow_model->get($workflow_id);
+        
+        return new WP_REST_Response($workflow, 201);
     }
 }

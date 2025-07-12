@@ -1,0 +1,71 @@
+{
+  "name": "Example Make.com Scenario",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "parameters": {
+        "hook": 987654,
+        "maxResults": 1
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 2,
+      "module": "openai:CreateChatCompletion",
+      "version": 1,
+      "parameters": {
+        "apiKey": "connection:openai",
+        "max_tokens": 1000
+      },
+      "mapper": {
+        "model": "gpt-3.5-turbo",
+        "messages": [
+          {
+            "role": "user",
+            "content": "{{1.message}}"
+          }
+        ]
+      },
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 3,
+      "module": "slack:CreateMessage",
+      "version": 1,
+      "parameters": {
+        "connection": "connection:slack"
+      },
+      "mapper": {
+        "channel": "#general",
+        "text": "AI Response: {{2.choices[0].message.content}}"
+      },
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "version": 1,
+    "scenario": {
+      "autoCommit": true,
+      "sequential": true,
+      "confidential": false
+    }
+  }
+}

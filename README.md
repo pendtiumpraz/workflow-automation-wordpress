@@ -2,9 +2,9 @@
 
 A powerful WordPress plugin that brings OpsGuide's workflow automation capabilities to WordPress. This plugin allows you to create visual workflows with various integrations including LINE, Google Sheets, LLMs, and more.
 
-## 🚀 Current Progress: 85%
+## 🚀 Current Progress: 90%
 
-### ✅ Completed Features (85%)
+### ✅ Completed Features (90%)
 - [x] Core plugin architecture and structure
 - [x] Database schema and models
 - [x] REST API endpoints
@@ -19,6 +19,9 @@ A powerful WordPress plugin that brings OpsGuide's workflow automation capabilit
 - [x] AI nodes (OpenAI, Claude, Gemini)
 - [x] WordPress-specific nodes (Post, User, Media)
 - [x] Workflow templates system
+- [x] Visual workflow builder with drag-and-drop
+- [x] Node connection system with SVG paths
+- [x] Import/Export functionality with n8n and Make.com compatibility
 - [x] Node types:
   - [x] Webhook Start Node with authentication
   - [x] Email Node
@@ -38,16 +41,16 @@ A powerful WordPress plugin that brings OpsGuide's workflow automation capabilit
   - [x] WordPress User Node
   - [x] WordPress Media Node
 
-### 🔄 In Progress (10%)
-- [ ] React-based workflow builder UI (60% complete)
+### 🔄 In Progress (5%)
 - [ ] Testing suite (20% complete)
-- [ ] Import/Export functionality (10% complete)
+- [ ] Documentation improvements (ongoing)
 
 ### ❌ To Do (5%)
 - [ ] Microsoft 365 integration
 - [ ] HubSpot integration
 - [ ] Notion integration
 - [ ] Telegram/WhatsApp nodes
+- [ ] React-based workflow builder (future enhancement)
 - [ ] Multi-language support
 - [ ] Performance optimization
 - [ ] Analytics dashboard
@@ -194,6 +197,47 @@ git clone https://github.com/pendtiumpraz/workflow-automation-wordpress.git work
 2. Activate the plugin through the WordPress admin panel
 
 3. Configure integrations in Workflow Automation > Integrations
+
+## 📦 Import/Export Workflows
+
+The plugin supports importing and exporting workflows in multiple formats:
+
+### Supported Formats
+- **Native Format**: Our own JSON format for full feature compatibility
+- **n8n**: Import/export workflows from [n8n.io](https://n8n.io)
+- **Make.com**: Import/export scenarios from [Make.com](https://make.com) (formerly Integromat)
+
+### How to Export
+1. Go to **Workflow Automation > Workflows**
+2. Click the **Download** button on any workflow
+3. Select your desired format (Native, n8n, or Make.com)
+4. The workflow will be downloaded as a JSON file
+
+### How to Import
+1. Go to **Workflow Automation > Workflows**
+2. Click the **Import** button at the top
+3. Select the format of your file
+4. Upload the JSON file or paste the JSON content
+5. Click **Import Workflow**
+
+### Node Type Mappings
+The plugin automatically converts between different platforms' node types:
+
+| Our Type | n8n Type | Make.com Module |
+|----------|----------|-----------------|
+| webhook_start | n8n-nodes-base.webhook | gateway:CustomWebHook |
+| http | n8n-nodes-base.httpRequest | http:ActionSendRequest |
+| openai | n8n-nodes-base.openAi | openai:CreateCompletion |
+| slack | n8n-nodes-base.slack | slack:CreateMessage |
+| email | n8n-nodes-base.emailSend | email:ActionSendEmail |
+| google_sheets | n8n-nodes-base.googleSheets | google-sheets:ActionAddRow |
+| filter | n8n-nodes-base.if | builtin:BasicFeeder |
+| loop | n8n-nodes-base.splitInBatches | builtin:BasicIterator |
+
+### Example Import Files
+Test import files are available in the `test-imports/` directory:
+- `n8n-example.json` - Example n8n workflow
+- `make-example.json` - Example Make.com scenario
 
 ## 🛠️ Development Setup
 

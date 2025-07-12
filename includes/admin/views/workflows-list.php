@@ -44,6 +44,10 @@ foreach ($workflows as $workflow) {
                 <p class="wa-admin-subtitle"><?php _e('Automate your tasks with intelligent workflows', 'workflow-automation'); ?></p>
             </div>
             <div class="wa-admin-actions">
+                <button type="button" id="wa-import-workflow" class="wa-btn wa-btn-outline wa-btn-lg">
+                    <span class="dashicons dashicons-upload"></span>
+                    <?php _e('Import', 'workflow-automation'); ?>
+                </button>
                 <a href="<?php echo admin_url('admin.php?page=workflow-automation-new'); ?>" class="wa-btn wa-btn-primary wa-btn-lg">
                     <span class="dashicons dashicons-plus"></span>
                     <?php _e('Create Workflow', 'workflow-automation'); ?>
@@ -193,6 +197,12 @@ foreach ($workflows as $workflow) {
                                     <span class="dashicons dashicons-<?php echo $workflow->status === 'active' ? 'pause' : 'controls-play'; ?>"></span>
                                 </button>
                             </div>
+                            <button type="button" class="wa-btn wa-btn-outline wa-btn-sm wa-export-workflow" 
+                                    data-workflow-id="<?php echo esc_attr($workflow->id); ?>"
+                                    data-workflow-name="<?php echo esc_attr($workflow->name); ?>"
+                                    title="<?php esc_attr_e('Export workflow', 'workflow-automation'); ?>">
+                                <span class="dashicons dashicons-download"></span>
+                            </button>
                             <button type="button" class="wa-btn wa-btn-danger wa-btn-sm wa-delete-workflow" 
                                     data-workflow-id="<?php echo esc_attr($workflow->id); ?>"
                                     title="<?php esc_attr_e('Delete workflow', 'workflow-automation'); ?>">
@@ -274,30 +284,240 @@ foreach ($workflows as $workflow) {
 }
 </style>
 
+<!-- Import Modal -->
+<div id="wa-import-modal" class="wa-modal" style="display: none;">
+    <div class="wa-modal-content wa-modal-large">
+        <div class="wa-modal-header">
+            <h2><?php _e('Import Workflow', 'workflow-automation'); ?></h2>
+            <button type="button" class="wa-modal-close">&times;</button>
+        </div>
+        
+        <div class="wa-modal-body">
+            <form id="wa-import-form">
+                <div class="wa-form-group">
+                    <label><?php _e('Import Format', 'workflow-automation'); ?></label>
+                    <select id="import-format" name="format" class="wa-form-select">
+                        <option value="native"><?php _e('Workflow Automation (Native)', 'workflow-automation'); ?></option>
+                        <option value="n8n"><?php _e('n8n', 'workflow-automation'); ?></option>
+                        <option value="make"><?php _e('Make.com (Integromat)', 'workflow-automation'); ?></option>
+                    </select>
+                </div>
+                
+                <div class="wa-form-group">
+                    <label><?php _e('Upload JSON File', 'workflow-automation'); ?></label>
+                    <input type="file" id="import-file" name="file" accept=".json" class="wa-form-input">
+                    <p class="wa-form-help"><?php _e('Select a JSON file exported from Workflow Automation, n8n, or Make.com', 'workflow-automation'); ?></p>
+                </div>
+                
+                <div class="wa-form-group">
+                    <label><?php _e('Or Paste JSON', 'workflow-automation'); ?></label>
+                    <textarea id="import-json" name="json" rows="10" class="wa-form-textarea" placeholder='{"name": "My Workflow", "nodes": [...]}'></textarea>
+                </div>
+            </form>
+        </div>
+        
+        <div class="wa-modal-footer">
+            <button type="button" class="wa-btn wa-btn-primary" id="wa-do-import">
+                <?php _e('Import Workflow', 'workflow-automation'); ?>
+            </button>
+            <button type="button" class="wa-btn wa-modal-close">
+                <?php _e('Cancel', 'workflow-automation'); ?>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div id="wa-export-modal" class="wa-modal" style="display: none;">
+    <div class="wa-modal-content">
+        <div class="wa-modal-header">
+            <h2><?php _e('Export Workflow', 'workflow-automation'); ?></h2>
+            <button type="button" class="wa-modal-close">&times;</button>
+        </div>
+        
+        <div class="wa-modal-body">
+            <form id="wa-export-form">
+                <div class="wa-form-group">
+                    <label><?php _e('Export Format', 'workflow-automation'); ?></label>
+                    <select id="export-format" name="format" class="wa-form-select">
+                        <option value="native"><?php _e('Workflow Automation (Native)', 'workflow-automation'); ?></option>
+                        <option value="n8n"><?php _e('n8n', 'workflow-automation'); ?></option>
+                        <option value="make"><?php _e('Make.com (Integromat)', 'workflow-automation'); ?></option>
+                    </select>
+                    <p class="wa-form-help"><?php _e('Choose the format for your export', 'workflow-automation'); ?></p>
+                </div>
+            </form>
+        </div>
+        
+        <div class="wa-modal-footer">
+            <button type="button" class="wa-btn wa-btn-primary" id="wa-download-export">
+                <?php _e('Download JSON', 'workflow-automation'); ?>
+            </button>
+            <button type="button" class="wa-btn wa-modal-close">
+                <?php _e('Cancel', 'workflow-automation'); ?>
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 jQuery(document).ready(function($) {
-    // Add click handlers for workflow actions
-    $('.wa-duplicate-workflow').on('click', function() {
-        var workflowId = $(this).data('workflow-id');
-        // TODO: Implement duplicate workflow functionality
-        console.log('Duplicate workflow:', workflowId);
+    var currentExportWorkflowId = null;
+    var currentExportWorkflowName = null;
+    
+    // Import workflow
+    $('#wa-import-workflow').on('click', function() {
+        $('#wa-import-modal').show();
     });
     
+    // Export workflow
+    $('.wa-export-workflow').on('click', function() {
+        currentExportWorkflowId = $(this).data('workflow-id');
+        currentExportWorkflowName = $(this).data('workflow-name');
+        $('#wa-export-modal').show();
+    });
+    
+    // Close modals
+    $('.wa-modal-close').on('click', function() {
+        $(this).closest('.wa-modal').hide();
+    });
+    
+    // Handle file selection
+    $('#import-file').on('change', function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                $('#import-json').val(e.target.result);
+            };
+            reader.readAsText(file);
+        }
+    });
+    
+    // Do import
+    $('#wa-do-import').on('click', function() {
+        var format = $('#import-format').val();
+        var jsonData = $('#import-json').val();
+        
+        if (!jsonData) {
+            alert('<?php esc_attr_e('Please select a file or paste JSON data', 'workflow-automation'); ?>');
+            return;
+        }
+        
+        var $button = $(this);
+        $button.prop('disabled', true).text('<?php esc_attr_e('Importing...', 'workflow-automation'); ?>');
+        
+        try {
+            var data = JSON.parse(jsonData);
+            
+            $.ajax({
+                url: '<?php echo home_url('/wp-json/wa/v1/workflows/import'); ?>',
+                method: 'POST',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce('wp_rest'); ?>');
+                },
+                data: JSON.stringify({
+                    format: format,
+                    data: data
+                }),
+                contentType: 'application/json',
+                success: function(response) {
+                    alert('<?php esc_attr_e('Workflow imported successfully!', 'workflow-automation'); ?>');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    var message = '<?php esc_attr_e('Import failed', 'workflow-automation'); ?>';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+                    alert(message);
+                    $button.prop('disabled', false).text('<?php esc_attr_e('Import Workflow', 'workflow-automation'); ?>');
+                }
+            });
+        } catch (e) {
+            alert('<?php esc_attr_e('Invalid JSON format', 'workflow-automation'); ?>');
+            $button.prop('disabled', false).text('<?php esc_attr_e('Import Workflow', 'workflow-automation'); ?>');
+        }
+    });
+    
+    // Download export
+    $('#wa-download-export').on('click', function() {
+        if (!currentExportWorkflowId) return;
+        
+        var format = $('#export-format').val();
+        
+        $.ajax({
+            url: '<?php echo home_url('/wp-json/wa/v1/workflows/'); ?>' + currentExportWorkflowId + '/export',
+            method: 'GET',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce('wp_rest'); ?>');
+            },
+            data: { format: format },
+            success: function(response) {
+                // Create download
+                var blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' });
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = currentExportWorkflowName + '_' + format + '.json';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                $('#wa-export-modal').hide();
+            },
+            error: function(xhr) {
+                alert('<?php esc_attr_e('Export failed', 'workflow-automation'); ?>');
+            }
+        });
+    });
+    
+    // Toggle workflow status
     $('.wa-toggle-workflow').on('click', function() {
-        var workflowId = $(this).data('workflow-id');
-        var currentStatus = $(this).data('current-status');
+        var $button = $(this);
+        var workflowId = $button.data('workflow-id');
+        var currentStatus = $button.data('current-status');
         var newStatus = currentStatus === 'active' ? 'inactive' : 'active';
         
-        // TODO: Implement toggle workflow status
-        console.log('Toggle workflow:', workflowId, 'from', currentStatus, 'to', newStatus);
+        $button.prop('disabled', true);
+        
+        $.ajax({
+            url: wa_admin.api_url + '/workflows/' + workflowId,
+            method: 'PUT',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', wa_admin.nonce);
+            },
+            data: JSON.stringify({ status: newStatus }),
+            contentType: 'application/json',
+            success: function() {
+                location.reload();
+            },
+            error: function() {
+                alert('<?php esc_attr_e('Failed to update workflow status', 'workflow-automation'); ?>');
+                $button.prop('disabled', false);
+            }
+        });
     });
     
+    // Delete workflow
     $('.wa-delete-workflow').on('click', function() {
         var workflowId = $(this).data('workflow-id');
         
-        if (confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
-            // TODO: Implement delete workflow functionality
-            console.log('Delete workflow:', workflowId);
+        if (confirm('<?php esc_attr_e('Are you sure you want to delete this workflow? This action cannot be undone.', 'workflow-automation'); ?>')) {
+            $.ajax({
+                url: wa_admin.api_url + '/workflows/' + workflowId,
+                method: 'DELETE',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-WP-Nonce', wa_admin.nonce);
+                },
+                success: function() {
+                    location.reload();
+                },
+                error: function() {
+                    alert(wa_admin.i18n.delete_failed);
+                }
+            });
         }
     });
 });
