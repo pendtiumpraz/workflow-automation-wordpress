@@ -26,12 +26,25 @@
 
 /* Enhanced Node Header */
 .wa-node-header {
-    padding: 12px 16px;
-    border-radius: 6px 6px 0 0;
-    background: linear-gradient(135deg, var(--node-color, #3b82f6) 0%, var(--node-color-dark, #2563eb) 100%);
+    padding: 12px 16px !important;
+    border-radius: 6px 6px 0 0 !important;
+    background: var(--node-bg-color, #3b82f6) !important;
     display: flex;
     align-items: center;
     gap: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.wa-node-header::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%);
+    pointer-events: none;
 }
 
 .wa-node-header .dashicons {

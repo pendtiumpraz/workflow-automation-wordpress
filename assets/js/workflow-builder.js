@@ -225,12 +225,12 @@
                 .addClass('wa-workflow-node')
                 .attr('id', node.id)
                 .attr('data-node-id', node.id)
+                .attr('data-node-type', node.type)
                 .css({
                     left: node.position.x + 'px',
-                    top: node.position.y + 'px',
-                    borderColor: node.color
+                    top: node.position.y + 'px'
                 })
-                .html('<div class="wa-node-header" style="background-color: ' + node.color + '">' +
+                .html('<div class="wa-node-header" style="--node-bg-color: ' + node.color + '">' +
                       '<span class="dashicons ' + node.icon + '"></span>' +
                       '<span class="wa-node-label">' + node.label + '</span>' +
                       '<button type="button" class="wa-node-delete" title="Delete node">&times;</button>' +
@@ -420,10 +420,17 @@
                     xhr.setRequestHeader('X-WP-Nonce', wa_builder.nonce);
                 },
                 success: function(schema) {
+                    console.log('Node schema loaded:', schema);
                     self.renderConfigFields(node, schema);
                 },
-                error: function() {
-                    $('#wa-node-config-fields').html('<p>Failed to load configuration fields.</p>');
+                error: function(xhr, status, error) {
+                    console.error('Failed to load node schema:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        error: error
+                    });
+                    $('#wa-node-config-fields').html('<p>Failed to load configuration fields. Check console for details.</p>');
                 }
             });
         },
@@ -431,8 +438,8 @@
         renderConfigFields: function(node, schema) {
             var html = '';
             
-            if (schema && schema.fields) {
-                schema.fields.forEach(function(field) {
+            if (schema && schema.settings_fields) {
+                schema.settings_fields.forEach(function(field) {
                     html += '<div class="wa-form-group">';
                     html += '<label>' + field.label + '</label>';
                     
