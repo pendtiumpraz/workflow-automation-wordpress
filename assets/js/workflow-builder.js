@@ -144,6 +144,11 @@
             this.canvas = $('#wa-workflow-canvas');
             
             console.log('Canvas element:', this.canvas.length);
+            
+            // Add SVG layer for connections
+            var svgLayer = $('<svg class="wa-connections-layer"></svg>');
+            this.canvas.append(svgLayer);
+            this.connectionsLayer = svgLayer[0];
 
             // Make canvas droppable
             this.canvas.droppable({
@@ -183,6 +188,14 @@
             if (this.workflow.nodes && this.workflow.nodes.length > 0) {
                 this.loadNodes(this.workflow.nodes);
             }
+            
+            // Load existing connections after nodes are loaded
+            var self = this;
+            setTimeout(function() {
+                if (self.workflow.flow_data && self.workflow.flow_data.edges) {
+                    self.loadConnections(self.workflow.flow_data.edges);
+                }
+            }, 100);
         },
 
         addNode: function(type, label, icon, color, position) {
@@ -224,12 +237,15 @@
                       '</div>' +
                       '<div class="wa-node-body">' +
                       '<div class="wa-node-ports">' +
-                      '<div class="wa-node-port wa-port-in" data-port="in"></div>' +
-                      '<div class="wa-node-port wa-port-out" data-port="out"></div>' +
+                      '<div class="wa-node-port wa-port-in" data-port="in" data-node-id="' + node.id + '"></div>' +
+                      '<div class="wa-node-port wa-port-out" data-port="out" data-node-id="' + node.id + '"></div>' +
                       '</div>' +
                       '</div>');
 
             this.canvas.append(nodeHtml);
+            
+            // Make ports connectable
+            this.makePortsConnectable(nodeHtml);
 
             // Make node draggable within canvas
             nodeHtml.draggable({
@@ -287,6 +303,26 @@
                 
                 self.nodes.push(node);
                 self.renderNode(node);
+            });
+        },
+        
+        loadConnections: function(edges) {
+            var self = this;
+            if (!edges || !Array.isArray(edges)) {
+                return;
+            }
+            
+            edges.forEach(function(edge) {
+                if (edge.source && edge.target) {
+                    var connection = {
+                        id: 'conn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                        source: edge.source,
+                        target: edge.target
+                    };
+                    
+                    self.connections.push(connection);
+                    self.drawConnection(connection);
+                }
             });
         },
 
@@ -477,17 +513,6 @@
             this.markDirty();
         },
 
-        updateConnections: function(nodeId) {
-            // Update connection lines when node is moved
-            // This would update SVG paths or similar
-        },
-
-        removeNodeConnections: function(nodeId) {
-            // Remove connections to/from this node
-            this.connections = this.connections.filter(function(conn) {
-                return conn.source !== nodeId && conn.target !== nodeId;
-            });
-        },
 
         toggleCategory: function($title) {
             $title.toggleClass('expanded');
@@ -554,7 +579,12 @@
                             position_y: node.position.y
                         };
                     }),
-                    edges: this.connections
+                    edges: this.connections.map(function(conn) {
+                        return {
+                            source: conn.source,
+                            target: conn.target
+                        };
+                    })
                 }
             };
             
@@ -664,6 +694,231 @@
         centerView: function() {
             // Implement center view
             console.log('Center view');
+        },
+        
+        // Connection handling methods
+        makePortsConnectable: function(nodeElement) {
+            var self = this;
+            var isConnecting = false;
+            var startPort = null;
+            var tempLine = null;
+            
+            // Handle port mousedown (start connection)
+            nodeElement.find('.wa-node-port').on('mousedown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                var $port = $(this);
+                var portType = $port.data('port');
+                var nodeId = $port.data('node-id');
+                
+                // Only allow connections from output ports
+                if (portType !== 'out') {
+                    return;
+                }
+                
+                isConnecting = true;
+                startPort = {
+                    element: $port,
+                    type: portType,
+                    nodeId: nodeId
+                };
+                
+                $port.addClass('connecting');
+                
+                // Create temporary line
+                var startPos = self.getPortPosition($port);
+                tempLine = self.createTempConnection(startPos.x, startPos.y);
+                
+                // Track mouse movement
+                $(document).on('mousemove.connection', function(e) {
+                    if (isConnecting && tempLine) {
+                        var canvasOffset = self.canvas.offset();
+                        var endX = e.pageX - canvasOffset.left;
+                        var endY = e.pageY - canvasOffset.top;
+                        self.updateTempConnection(tempLine, startPos.x, startPos.y, endX, endY);
+                    }
+                });
+                
+                // Handle mouseup
+                $(document).on('mouseup.connection', function(e) {
+                    if (isConnecting) {
+                        // Check if we're over a valid target port
+                        var $target = $(e.target);
+                        if ($target.hasClass('wa-node-port') && $target.data('port') === 'in') {
+                            var targetNodeId = $target.data('node-id');
+                            
+                            // Don't connect to same node
+                            if (targetNodeId !== startPort.nodeId) {
+                                // Create connection
+                                self.createConnection(startPort.nodeId, targetNodeId);
+                            }
+                        }
+                        
+                        // Clean up
+                        startPort.element.removeClass('connecting');
+                        $('.wa-node-port').removeClass('valid-target invalid-target');
+                        if (tempLine) {
+                            tempLine.remove();
+                        }
+                        isConnecting = false;
+                        startPort = null;
+                        tempLine = null;
+                        
+                        $(document).off('.connection');
+                    }
+                });
+            });
+            
+            // Handle port hover during connection
+            nodeElement.find('.wa-node-port').on('mouseenter', function() {
+                if (isConnecting) {
+                    var $port = $(this);
+                    var portType = $port.data('port');
+                    var nodeId = $port.data('node-id');
+                    
+                    if (portType === 'in' && nodeId !== startPort.nodeId) {
+                        $port.addClass('valid-target');
+                    } else {
+                        $port.addClass('invalid-target');
+                    }
+                }
+            }).on('mouseleave', function() {
+                $(this).removeClass('valid-target invalid-target');
+            });
+        },
+        
+        getPortPosition: function($port) {
+            var portOffset = $port.offset();
+            var canvasOffset = this.canvas.offset();
+            return {
+                x: portOffset.left - canvasOffset.left + $port.width() / 2,
+                y: portOffset.top - canvasOffset.top + $port.height() / 2
+            };
+        },
+        
+        createTempConnection: function(x1, y1) {
+            var svg = $('<svg class="wa-temp-connection" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">' +
+                       '<path class="wa-temp-connection-line" d="M' + x1 + ',' + y1 + ' L' + x1 + ',' + y1 + '"/>' +
+                       '</svg>');
+            this.canvas.append(svg);
+            return svg;
+        },
+        
+        updateTempConnection: function(svg, x1, y1, x2, y2) {
+            var path = this.createConnectionPath(x1, y1, x2, y2);
+            svg.find('path').attr('d', path);
+        },
+        
+        createConnection: function(sourceNodeId, targetNodeId) {
+            // Check if connection already exists
+            var existingConnection = this.connections.find(function(conn) {
+                return conn.source === sourceNodeId && conn.target === targetNodeId;
+            });
+            
+            if (existingConnection) {
+                return;
+            }
+            
+            // Add to connections array
+            var connection = {
+                id: 'conn_' + Date.now(),
+                source: sourceNodeId,
+                target: targetNodeId
+            };
+            
+            this.connections.push(connection);
+            this.drawConnection(connection);
+            this.markDirty();
+            
+            console.log('Connection created:', connection);
+        },
+        
+        drawConnection: function(connection) {
+            var sourceNode = $('#' + connection.source);
+            var targetNode = $('#' + connection.target);
+            
+            if (sourceNode.length === 0 || targetNode.length === 0) {
+                return;
+            }
+            
+            var sourcePort = sourceNode.find('.wa-port-out');
+            var targetPort = targetNode.find('.wa-port-in');
+            
+            var sourcePos = this.getPortPosition(sourcePort);
+            var targetPos = this.getPortPosition(targetPort);
+            
+            var path = this.createConnectionPath(sourcePos.x, sourcePos.y, targetPos.x, targetPos.y);
+            
+            var pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathElement.setAttribute('class', 'wa-connection-path');
+            pathElement.setAttribute('d', path);
+            pathElement.setAttribute('data-connection-id', connection.id);
+            pathElement.setAttribute('data-source', connection.source);
+            pathElement.setAttribute('data-target', connection.target);
+            
+            this.connectionsLayer.appendChild(pathElement);
+            
+            // Add click handler for deletion
+            var self = this;
+            $(pathElement).on('click', function(e) {
+                e.stopPropagation();
+                if (confirm('Delete this connection?')) {
+                    self.deleteConnection(connection.id);
+                }
+            });
+        },
+        
+        createConnectionPath: function(x1, y1, x2, y2) {
+            // Create a curved path (bezier curve)
+            var dx = x2 - x1;
+            var dy = y2 - y1;
+            var cx1 = x1 + dx * 0.5;
+            var cy1 = y1;
+            var cx2 = x2 - dx * 0.5;
+            var cy2 = y2;
+            
+            return 'M' + x1 + ',' + y1 + ' C' + cx1 + ',' + cy1 + ' ' + cx2 + ',' + cy2 + ' ' + x2 + ',' + y2;
+        },
+        
+        updateConnections: function(nodeId) {
+            var self = this;
+            
+            // Update all connections related to this node
+            this.connections.forEach(function(connection) {
+                if (connection.source === nodeId || connection.target === nodeId) {
+                    // Remove old path
+                    $('[data-connection-id="' + connection.id + '"]').remove();
+                    // Redraw
+                    self.drawConnection(connection);
+                }
+            });
+        },
+        
+        deleteConnection: function(connectionId) {
+            // Remove from array
+            this.connections = this.connections.filter(function(conn) {
+                return conn.id !== connectionId;
+            });
+            
+            // Remove from DOM
+            $('[data-connection-id="' + connectionId + '"]').remove();
+            
+            this.markDirty();
+        },
+        
+        removeNodeConnections: function(nodeId) {
+            var self = this;
+            
+            // Find all connections for this node
+            var connectionsToRemove = this.connections.filter(function(conn) {
+                return conn.source === nodeId || conn.target === nodeId;
+            });
+            
+            // Remove each connection
+            connectionsToRemove.forEach(function(conn) {
+                self.deleteConnection(conn.id);
+            });
         }
     };
 

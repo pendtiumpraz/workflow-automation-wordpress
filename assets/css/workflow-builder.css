@@ -526,3 +526,65 @@ input:checked + .wa-slider:before {
 .wa-workflow-node {
     user-select: none;
 }
+
+/* SVG Connection Layer */
+.wa-connections-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.wa-connection-path {
+    stroke: #999;
+    stroke-width: 2;
+    fill: none;
+    pointer-events: stroke;
+}
+
+.wa-connection-path:hover {
+    stroke: #0073aa;
+    stroke-width: 3;
+}
+
+.wa-connection-path.selected {
+    stroke: #dc3232;
+    stroke-width: 3;
+}
+
+/* Port styles for connections */
+.wa-node-port {
+    z-index: 10;
+}
+
+.wa-node-port.connecting {
+    background: #0073aa;
+    transform: scale(1.2);
+}
+
+.wa-node-port.valid-target {
+    background: #46b450;
+    transform: scale(1.3);
+}
+
+.wa-node-port.invalid-target {
+    background: #dc3232;
+    transform: scale(0.8);
+}
+
+/* Temporary connection line */
+.wa-temp-connection {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.wa-temp-connection-line {
+    stroke: #0073aa;
+    stroke-width: 2;
+    stroke-dasharray: 5, 5;
+    fill: none;
+}

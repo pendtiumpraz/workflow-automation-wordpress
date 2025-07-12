@@ -39,10 +39,12 @@ Before creating workflows, you need to configure your integrations:
    - Click on a node to select it
    - Double-click a node to configure its settings
    - Fill in the required fields and save
-4. **Connecting Nodes** (Coming soon):
-   - Click on the output port of one node
-   - Drag to the input port of another node
-   - This creates the flow of your automation
+4. **Connecting Nodes**:
+   - Click and hold on the **output port** (right side circle) of a node
+   - Drag to the **input port** (left side circle) of another node
+   - Release to create a connection
+   - The connection will appear as a curved line
+   - Click on a connection line to delete it
 
 #### Step 3: Activate Your Workflow
 1. Use the toggle switch in the top-right corner
