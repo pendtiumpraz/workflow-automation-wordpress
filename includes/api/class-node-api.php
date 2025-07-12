@@ -35,6 +35,8 @@ class Node_API {
      * @since    1.0.0
      */
     public function register_routes() {
+        // Debug logging
+        error_log('Node_API: Registering REST routes');
         // GET /nodes/types
         register_rest_route($this->namespace, '/nodes/types', array(
             array(
@@ -144,8 +146,17 @@ class Node_API {
     public function get_node_schema($request) {
         $type = $request->get_param('type');
         
-        $executor = new Workflow_Executor();
-        $node_types = $executor->get_available_node_types();
+        error_log('Node_API: get_node_schema called for type: ' . $type);
+        
+        try {
+            $executor = new Workflow_Executor();
+            $node_types = $executor->get_available_node_types();
+            
+            error_log('Node_API: Available node types: ' . json_encode(array_keys($node_types)));
+        } catch (Exception $e) {
+            error_log('Node_API: Error creating Workflow_Executor: ' . $e->getMessage());
+            return new WP_Error('executor_error', 'Failed to load workflow executor: ' . $e->getMessage(), array('status' => 500));
+        }
         
         if (!isset($node_types[$type])) {
             return new WP_Error('invalid_node_type', __('Invalid node type', 'workflow-automation'), array('status' => 404));
