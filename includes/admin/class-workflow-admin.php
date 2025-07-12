@@ -104,6 +104,15 @@ class Workflow_Admin {
                     $this->version,
                     'all'
                 );
+                
+                // Enqueue modern builder styles with higher priority
+                wp_enqueue_style(
+                    $this->plugin_name . '-builder-modern',
+                    WA_PLUGIN_URL . 'assets/css/workflow-builder-modern.css',
+                    array($this->plugin_name . '-builder-enhanced'),
+                    $this->version,
+                    'all'
+                );
             }
         }
     }
@@ -164,6 +173,15 @@ class Workflow_Admin {
                     $this->plugin_name . '-builder',
                     WA_PLUGIN_URL . 'assets/js/workflow-builder.js',
                     array('jquery', 'jquery-ui-draggable', 'jquery-ui-droppable', 'wp-api'),
+                    $this->version,
+                    true
+                );
+                
+                // Connection helper script
+                wp_enqueue_script(
+                    $this->plugin_name . '-connection-helper',
+                    WA_PLUGIN_URL . 'assets/js/workflow-connection-helper.js',
+                    array($this->plugin_name . '-builder'),
                     $this->version,
                     true
                 );
