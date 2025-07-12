@@ -402,6 +402,8 @@
         showNodeConfiguration: function(node) {
             var self = this;
             
+            console.log('showNodeConfiguration called for node:', node);
+            
             $('#wa-node-config-title').text('Configure ' + node.label);
             $('#wa-node-config-modal').show();
             
@@ -411,6 +413,14 @@
 
         loadNodeConfigFields: function(node) {
             var self = this;
+            
+            console.log('loadNodeConfigFields called, making API request to:', wa_builder.api_url + '/nodes/types/' + node.type + '/schema');
+            console.log('Node object:', node);
+            console.log('wa_builder object:', wa_builder);
+            
+            // Show loading message and test button
+            $('#wa-node-config-fields').html('<p>Loading configuration fields...</p>' +
+                '<button onclick="WorkflowBuilder.testAPI(\'' + node.type + '\')">Test API Manually</button>');
             
             // Get node configuration schema via API
             $.ajax({
@@ -432,6 +442,33 @@
                     });
                     $('#wa-node-config-fields').html('<p>Failed to load configuration fields. Check console for details.</p>');
                 }
+            });
+        },
+
+        testAPI: function(nodeType) {
+            console.log('Testing API for node type:', nodeType);
+            fetch(wa_builder.api_url + '/nodes/types/' + nodeType + '/schema', {
+                method: 'GET',
+                headers: {
+                    'X-WP-Nonce': wa_builder.nonce,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.text();
+            })
+            .then(text => {
+                console.log('Response text:', text);
+                try {
+                    const json = JSON.parse(text);
+                    console.log('Parsed JSON:', json);
+                } catch (e) {
+                    console.error('Failed to parse JSON:', e);
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
             });
         },
 
