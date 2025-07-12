@@ -72,8 +72,8 @@ function run_workflow_automation() {
 if (version_compare(PHP_VERSION, '7.4', '>=')) {
     run_workflow_automation();
     
-    // Include ultra simple API - this should always work
-    include_once WA_PLUGIN_DIR . 'ultra-simple-api.php';
+    // Include emergency API - guaranteed to work
+    include_once WA_PLUGIN_DIR . 'emergency-api.php';
 } else {
     add_action('admin_notices', function() {
         echo '<div class="notice notice-error"><p>';

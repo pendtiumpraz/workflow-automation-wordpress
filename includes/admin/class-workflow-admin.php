@@ -122,6 +122,15 @@ class Workflow_Admin {
                     $this->version . '-' . time(), // Force cache bust
                     'all'
                 );
+                
+                // Enqueue node visibility fix
+                wp_enqueue_style(
+                    $this->plugin_name . '-node-visibility-fix',
+                    WA_PLUGIN_URL . 'assets/css/node-visibility-fix.css',
+                    array($this->plugin_name . '-builder-force'),
+                    $this->version . '-' . time(),
+                    'all'
+                );
             }
         }
     }
@@ -208,6 +217,15 @@ class Workflow_Admin {
                 wp_enqueue_script(
                     $this->plugin_name . '-node-connections',
                     WA_PLUGIN_URL . 'assets/js/node-connections.js',
+                    array('jquery', $this->plugin_name . '-builder'),
+                    $this->version . '-' . time(),
+                    true
+                );
+                
+                // Node debug script
+                wp_enqueue_script(
+                    $this->plugin_name . '-node-debug',
+                    WA_PLUGIN_URL . 'assets/js/node-debug.js',
                     array('jquery', $this->plugin_name . '-builder'),
                     $this->version . '-' . time(),
                     true
