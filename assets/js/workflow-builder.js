@@ -650,22 +650,36 @@
 
         saveWorkflow: function() {
             var self = this;
-            var $button = $('#wa-save-workflow');
+            var $button = $('#wa-save-workflow, .wa-save-workflow, button[data-action="save-workflow"]');
+            
+            console.log('saveWorkflow called, nodes:', this.nodes.length, 'connections:', this.connections.length);
             
             $button.prop('disabled', true).html('<span class="dashicons dashicons-update-alt"></span> ' + wa_builder.i18n.saving);
             
+            // Update workflow name from UI if changed
+            var nameElement = $('#wa-workflow-name');
+            if (nameElement.length > 0 && nameElement.text().trim()) {
+                this.workflow.name = nameElement.text().trim();
+            }
+            
+            // Update workflow status from UI
+            var statusElement = $('#wa-workflow-active');
+            if (statusElement.length > 0) {
+                this.workflow.status = statusElement.is(':checked') ? 'active' : 'draft';
+            }
+            
             // Prepare workflow data
             var workflowData = {
-                name: this.workflow.name,
+                name: this.workflow.name || 'Untitled Workflow',
                 status: this.workflow.status || 'draft',
                 flow_data: {
                     nodes: this.nodes.map(function(node) {
                         return {
                             node_id: node.id,
                             node_type: node.type,
-                            settings: JSON.stringify(node.data),
-                            position_x: node.position.x,
-                            position_y: node.position.y
+                            settings: JSON.stringify(node.data || {}),
+                            position_x: Math.round(node.position ? node.position.x : 100),
+                            position_y: Math.round(node.position ? node.position.y : 100)
                         };
                     }),
                     edges: this.connections.map(function(conn) {
@@ -677,22 +691,45 @@
                 }
             };
             
+            console.log('Saving workflow data:', workflowData);
+            
             // Save via API
             $.ajax({
                 url: wa_builder.api_url + '/workflows/' + this.workflow.id,
                 method: 'PUT',
                 beforeSend: function(xhr) {
                     xhr.setRequestHeader('X-WP-Nonce', wa_builder.nonce);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
                 },
                 data: JSON.stringify(workflowData),
-                contentType: 'application/json',
+                timeout: 30000,
                 success: function(response) {
+                    console.log('Save successful:', response);
                     self.isDirty = false;
                     self.showSaveSuccess();
                     $button.prop('disabled', false).html('<span class="dashicons dashicons-yes"></span> ' + wa_builder.i18n.save);
+                    
+                    // Trigger save event
+                    $(document).trigger('workflowSaved', [response]);
                 },
-                error: function() {
-                    alert(wa_builder.i18n.save_failed);
+                error: function(xhr, status, error) {
+                    console.error('Save failed:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        error: error
+                    });
+                    
+                    var errorMessage = wa_builder.i18n.save_failed;
+                    if (xhr.status === 403) {
+                        errorMessage = 'Permission denied. Please check your user permissions.';
+                    } else if (xhr.status === 404) {
+                        errorMessage = 'Workflow not found. Please refresh the page.';
+                    } else if (xhr.status >= 500) {
+                        errorMessage = 'Server error. Please try again later.';
+                    }
+                    
+                    alert(errorMessage);
                     $button.prop('disabled', false).html('<span class="dashicons dashicons-yes"></span> ' + wa_builder.i18n.save);
                 }
             });
@@ -924,20 +961,46 @@
         },
         
         drawConnection: function(connection) {
+            console.log('Drawing connection:', connection);
+            
             var sourceNode = $('#' + connection.source);
             var targetNode = $('#' + connection.target);
             
             if (sourceNode.length === 0 || targetNode.length === 0) {
+                console.error('Nodes not found for connection:', connection);
                 return;
             }
             
             var sourcePort = sourceNode.find('.wa-port-out');
             var targetPort = targetNode.find('.wa-port-in');
             
+            if (sourcePort.length === 0 || targetPort.length === 0) {
+                console.error('Ports not found for connection');
+                return;
+            }
+            
+            // Ensure connections layer exists
+            if (!this.connectionsLayer || !document.contains(this.connectionsLayer)) {
+                console.log('Connections layer missing, recreating...');
+                var canvas = $('#wa-workflow-canvas');
+                var svgLayer = $('<svg class="wa-connections-layer" xmlns="http://www.w3.org/2000/svg"></svg>');
+                svgLayer.attr({
+                    'width': Math.max(canvas.width(), 1000),
+                    'height': Math.max(canvas.height(), 800),
+                    'viewBox': '0 0 ' + Math.max(canvas.width(), 1000) + ' ' + Math.max(canvas.height(), 800),
+                    'style': 'position: absolute; top: 0; left: 0; pointer-events: none; z-index: 5;'
+                });
+                canvas.prepend(svgLayer);
+                this.connectionsLayer = svgLayer[0];
+            }
+            
             var sourcePos = this.getPortPosition(sourcePort);
             var targetPos = this.getPortPosition(targetPort);
             
             var path = this.createConnectionPath(sourcePos.x, sourcePos.y, targetPos.x, targetPos.y);
+            
+            // Remove existing connection with same ID
+            $('[data-connection-id="' + connection.id + '"]').remove();
             
             var pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             pathElement.setAttribute('class', 'wa-connection-path');
@@ -945,8 +1008,15 @@
             pathElement.setAttribute('data-connection-id', connection.id);
             pathElement.setAttribute('data-source', connection.source);
             pathElement.setAttribute('data-target', connection.target);
+            pathElement.setAttribute('marker-end', 'url(#arrowhead)');
             
             this.connectionsLayer.appendChild(pathElement);
+            
+            // Force visibility
+            $(pathElement).css({
+                'visibility': 'visible',
+                'opacity': '1'
+            });
             
             // Add click handler for deletion
             var self = this;
@@ -954,8 +1024,11 @@
                 e.stopPropagation();
                 if (confirm('Delete this connection?')) {
                     self.deleteConnection(connection.id);
+                    $(document).trigger('connectionDeleted', [connection]);
                 }
             });
+            
+            console.log('Connection drawn successfully:', pathElement);
         },
         
         createConnectionPath: function(x1, y1, x2, y2) {

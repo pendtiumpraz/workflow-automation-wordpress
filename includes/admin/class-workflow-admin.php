@@ -231,6 +231,15 @@ class Workflow_Admin {
                     true
                 );
                 
+                // Workflow fixes script
+                wp_enqueue_script(
+                    $this->plugin_name . '-workflow-fixes',
+                    WA_PLUGIN_URL . 'assets/js/workflow-fixes.js',
+                    array('jquery', $this->plugin_name . '-builder'),
+                    $this->version . '-' . time(),
+                    true
+                );
+                
                 // Localize builder script
                 wp_localize_script(
                     $this->plugin_name . '-builder',
