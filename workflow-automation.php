@@ -71,6 +71,9 @@ function run_workflow_automation() {
 // Check PHP version
 if (version_compare(PHP_VERSION, '7.4', '>=')) {
     run_workflow_automation();
+    
+    // Include simple API for immediate functionality
+    include_once WA_PLUGIN_DIR . 'simple-api.php';
 } else {
     add_action('admin_notices', function() {
         echo '<div class="notice notice-error"><p>';

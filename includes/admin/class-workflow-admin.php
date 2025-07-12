@@ -204,6 +204,15 @@ class Workflow_Admin {
                     false // Load in head for immediate effect
                 );
                 
+                // Node connections script
+                wp_enqueue_script(
+                    $this->plugin_name . '-node-connections',
+                    WA_PLUGIN_URL . 'assets/js/node-connections.js',
+                    array('jquery', $this->plugin_name . '-builder'),
+                    $this->version . '-' . time(),
+                    true
+                );
+                
                 // Localize builder script
                 wp_localize_script(
                     $this->plugin_name . '-builder',

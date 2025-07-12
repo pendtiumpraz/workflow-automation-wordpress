@@ -7,14 +7,118 @@
 
 <script>
 jQuery(document).ready(function($) {
-    // Override the loadNodeConfigFields function with static content
+    // Override the loadNodeConfigFields function with actual API call + fallback
     if (window.WorkflowBuilder) {
         window.WorkflowBuilder.loadNodeConfigFields = function(node) {
-            console.log('Static test: Loading config for node type:', node.type);
+            console.log('Loading actual config for node type:', node.type);
             
-            var html = '<h3>Test Configuration Fields</h3>';
-            html += '<p>Node Type: <strong>' + node.type + '</strong></p>';
-            html += '<p>Node Label: <strong>' + node.label + '</strong></p>';
+            var self = this;
+            
+            // Show loading
+            $('#wa-node-config-fields').html('<p>Loading configuration...</p>');
+            
+            // Try the actual API first
+            $.ajax({
+                url: wa_builder.api_url + '/nodes/types/' + node.type + '/schema',
+                method: 'GET',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-WP-Nonce', wa_builder.nonce);
+                },
+                success: function(schema) {
+                    console.log('API Success! Schema loaded:', schema);
+                    self.renderActualConfigFields(node, schema);
+                },
+                error: function(xhr, status, error) {
+                    console.warn('API failed, using fallback. Error:', error);
+                    self.renderFallbackConfigFields(node);
+                }
+            });
+        };
+        
+        // Add method to render actual config fields from API
+        window.WorkflowBuilder.renderActualConfigFields = function(node, schema) {
+            console.log('Rendering actual fields from schema:', schema);
+            
+            var html = '<h3>' + (schema.label || node.label) + ' Configuration</h3>';
+            
+            // Show integration status
+            if (schema.integration_status) {
+                var statusColor = schema.integration_status === 'active' ? '#10b981' : '#f59e0b';
+                var statusText = schema.integration_status === 'active' ? 'Integration Active' : 'Integration Inactive';
+                var statusIcon = schema.integration_status === 'active' ? '✅' : '⚠️';
+                
+                html += '<div style="background: ' + statusColor + '; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 15px; font-size: 12px;">';
+                html += statusIcon + ' ' + statusText;
+                if (schema.integration_status === 'inactive') {
+                    html += ' - Configure this integration in settings';
+                }
+                html += '</div>';
+            }
+            
+            if (schema.description) {
+                html += '<p class="description">' + schema.description + '</p>';
+            }
+            
+            // Render actual settings fields from schema
+            if (schema.settings_fields && schema.settings_fields.length > 0) {
+                schema.settings_fields.forEach(function(field) {
+                    html += '<div class="wa-form-group">';
+                    html += '<label for="field_' + field.key + '">' + field.label;
+                    if (field.required) {
+                        html += ' <span style="color: red;">*</span>';
+                    }
+                    html += '</label>';
+                    
+                    var value = node.data && node.data[field.key] ? node.data[field.key] : (field.default || '');
+                    
+                    if (field.type === 'select') {
+                        html += '<select name="' + field.key + '" id="field_' + field.key + '" class="regular-text"';
+                        if (field.required) html += ' required';
+                        html += '>';
+                        
+                        if (field.options) {
+                            for (var optKey in field.options) {
+                                var selected = value === optKey ? ' selected' : '';
+                                html += '<option value="' + optKey + '"' + selected + '>' + field.options[optKey] + '</option>';
+                            }
+                        }
+                        html += '</select>';
+                        
+                    } else if (field.type === 'textarea') {
+                        html += '<textarea name="' + field.key + '" id="field_' + field.key + '" class="large-text"';
+                        if (field.rows) html += ' rows="' + field.rows + '"';
+                        if (field.required) html += ' required';
+                        if (field.placeholder) html += ' placeholder="' + field.placeholder + '"';
+                        html += '>' + value + '</textarea>';
+                        
+                    } else if (field.type === 'checkbox') {
+                        var checked = value ? ' checked' : '';
+                        html += '<label><input type="checkbox" name="' + field.key + '" id="field_' + field.key + '" value="1"' + checked + ' /> ' + (field.label || 'Enable') + '</label>';
+                        
+                    } else {
+                        // Default to text input
+                        html += '<input type="' + (field.type || 'text') + '" name="' + field.key + '" id="field_' + field.key + '" class="regular-text"';
+                        if (field.required) html += ' required';
+                        if (field.placeholder) html += ' placeholder="' + field.placeholder + '"';
+                        html += ' value="' + value + '" />';
+                    }
+                    
+                    if (field.description) {
+                        html += '<p class="description">' + field.description + '</p>';
+                    }
+                    
+                    html += '</div>';
+                });
+            } else {
+                html += '<p>No configuration fields available for this node type.</p>';
+            }
+            
+            $('#wa-node-config-fields').html(html);
+        };
+        
+        // Add fallback method for when API fails
+        window.WorkflowBuilder.renderFallbackConfigFields = function(node) {
+            console.log('Rendering fallback fields for node type:', node.type);
             
             // Add some test form fields
             html += '<div class="wa-form-group">';
