@@ -26,13 +26,20 @@ function wa_get_node_schema_simple($request) {
     
     error_log('Simple API: Getting schema for type: ' . $type);
     
-    // Load integration manager
-    if (file_exists(WA_PLUGIN_DIR . 'includes/integrations/class-integration-manager.php')) {
-        require_once WA_PLUGIN_DIR . 'includes/integrations/class-integration-manager.php';
-        $integration_manager = WA_Integration_Manager::getInstance();
-        $defaults = $integration_manager->get_node_defaults($type);
-    } else {
-        $defaults = array();
+    // Load integration manager - use plugin_dir_path instead of WA_PLUGIN_DIR
+    $plugin_dir = plugin_dir_path(dirname(__FILE__));
+    $integration_file = $plugin_dir . 'includes/integrations/class-integration-manager.php';
+    
+    $defaults = array();
+    
+    if (file_exists($integration_file)) {
+        try {
+            require_once $integration_file;
+            $integration_manager = WA_Integration_Manager::getInstance();
+            $defaults = $integration_manager->get_node_defaults($type);
+        } catch (Exception $e) {
+            error_log('Simple API: Error loading integration manager: ' . $e->getMessage());
+        }
     }
     
     // Define schemas for different node types

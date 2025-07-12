@@ -120,6 +120,12 @@ jQuery(document).ready(function($) {
         window.WorkflowBuilder.renderFallbackConfigFields = function(node) {
             console.log('Rendering fallback fields for node type:', node.type);
             
+            var html = '<h3>' + node.label + ' Configuration</h3>';
+            html += '<div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin-bottom: 15px; border-radius: 4px;">';
+            html += '<strong>⚠️ API Error</strong> - Using fallback configuration<br>';
+            html += '<small>Check console for details</small>';
+            html += '</div>';
+            
             // Add some test form fields
             html += '<div class="wa-form-group">';
             html += '<label for="test_field">Test Field</label>';
@@ -187,24 +193,10 @@ jQuery(document).ready(function($) {
                 html += '</div>';
             }
             
-            html += '<p><em>This is static test content. The real API call would load dynamic fields.</em></p>';
+            html += '<p><em>This is fallback content because API returned error.</em></p>';
             
-            // Find the config fields container and insert content
-            var configFields = $('#wa-node-config-fields');
-            if (configFields.length > 0) {
-                configFields.html(html);
-                console.log('Static content inserted successfully');
-            } else {
-                console.error('Could not find #wa-node-config-fields element');
-                // Try alternative selectors
-                var modalBody = $('.wa-modal-body');
-                if (modalBody.length > 0) {
-                    modalBody.html('<div id="wa-node-config-fields">' + html + '</div>');
-                    console.log('Static content inserted into modal body');
-                } else {
-                    console.error('Could not find modal body either');
-                }
-            }
+            // Insert content into modal
+            $('#wa-node-config-fields').html(html);
         };
         
         console.log('Static test mode enabled for node configuration');

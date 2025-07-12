@@ -57,12 +57,19 @@ class WA_Integration_Manager {
      * Check if SMTP is configured
      */
     private function is_smtp_configured() {
-        // Check common SMTP plugins
-        if (is_plugin_active('wp-mail-smtp/wp_mail_smtp.php')) {
-            return true;
+        // Check if function exists
+        if (!function_exists('is_plugin_active')) {
+            include_once(ABSPATH . 'wp-admin/includes/plugin.php');
         }
-        if (is_plugin_active('easy-wp-smtp/easy-wp-smtp.php')) {
-            return true;
+        
+        // Check common SMTP plugins
+        if (function_exists('is_plugin_active')) {
+            if (is_plugin_active('wp-mail-smtp/wp_mail_smtp.php')) {
+                return true;
+            }
+            if (is_plugin_active('easy-wp-smtp/easy-wp-smtp.php')) {
+                return true;
+            }
         }
         return false;
     }
