@@ -62,6 +62,21 @@ class Node_API {
             )
         ));
 
+        // GET /nodes/types/{type}/schema
+        register_rest_route($this->namespace, '/nodes/types/(?P<type>[a-zA-Z0-9_-]+)/schema', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'get_node_schema'),
+                'permission_callback' => array($this, 'check_permission'),
+                'args' => array(
+                    'type' => array(
+                        'required' => true,
+                        'sanitize_callback' => 'sanitize_text_field'
+                    )
+                )
+            )
+        ));
+
         // POST /nodes/validate
         register_rest_route($this->namespace, '/nodes/validate', array(
             array(
@@ -117,6 +132,53 @@ class Node_API {
         }
         
         return new WP_REST_Response($result);
+    }
+
+    /**
+     * Get schema for a specific node type
+     *
+     * @since    1.0.0
+     * @param    WP_REST_Request    $request    The REST request
+     * @return   WP_REST_Response|WP_Error
+     */
+    public function get_node_schema($request) {
+        $type = $request->get_param('type');
+        
+        $executor = new Workflow_Executor();
+        $node_types = $executor->get_available_node_types();
+        
+        if (!isset($node_types[$type])) {
+            return new WP_Error('invalid_node_type', __('Invalid node type', 'workflow-automation'), array('status' => 404));
+        }
+        
+        $class_name = $node_types[$type];
+        if (!class_exists($class_name)) {
+            return new WP_Error('node_class_not_found', __('Node class not found', 'workflow-automation'), array('status' => 500));
+        }
+        
+        try {
+            $node = new $class_name('temp_' . $type);
+            $options = $node->get_options();
+            
+            $schema = array(
+                'type' => $type,
+                'label' => $options['label'] ?? ucwords(str_replace('_', ' ', $type)),
+                'description' => $options['description'] ?? '',
+                'category' => $options['category'] ?? 'actions',
+                'can_be_start' => $options['can_be_start'] ?? false,
+                'icon' => array(
+                    'dashicon' => Node_Icons::get_icon($type, 'dashicon'),
+                    'svg' => Node_Icons::get_icon($type, 'svg'),
+                    'color' => Node_Icons::get_icon($type, 'color')
+                ),
+                'settings_fields' => $node->get_settings_fields()
+            );
+            
+            return new WP_REST_Response($schema);
+            
+        } catch (Exception $e) {
+            return new WP_Error('schema_error', $e->getMessage(), array('status' => 500));
+        }
     }
 
     /**

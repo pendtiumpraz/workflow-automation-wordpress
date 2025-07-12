@@ -95,6 +95,15 @@ class Workflow_Admin {
                     $this->version,
                     'all'
                 );
+                
+                // Enqueue enhanced builder styles
+                wp_enqueue_style(
+                    $this->plugin_name . '-builder-enhanced',
+                    WA_PLUGIN_URL . 'assets/css/workflow-builder-enhanced.css',
+                    array($this->plugin_name . '-builder'),
+                    $this->version,
+                    'all'
+                );
             }
         }
     }
