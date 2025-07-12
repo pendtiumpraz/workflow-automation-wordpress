@@ -113,6 +113,15 @@ class Workflow_Admin {
                     $this->version,
                     'all'
                 );
+                
+                // Enqueue force styles with maximum priority
+                wp_enqueue_style(
+                    $this->plugin_name . '-builder-force',
+                    WA_PLUGIN_URL . 'assets/css/workflow-builder-force.css',
+                    array($this->plugin_name . '-builder-modern'),
+                    $this->version . '-' . time(), // Force cache bust
+                    'all'
+                );
             }
         }
     }
@@ -184,6 +193,15 @@ class Workflow_Admin {
                     array($this->plugin_name . '-builder'),
                     $this->version,
                     true
+                );
+                
+                // Style cleaner script
+                wp_enqueue_script(
+                    $this->plugin_name . '-style-cleaner',
+                    WA_PLUGIN_URL . 'assets/js/style-cleaner.js',
+                    array('jquery'),
+                    $this->version . '-' . time(), // Force cache bust
+                    false // Load in head for immediate effect
                 );
                 
                 // Localize builder script

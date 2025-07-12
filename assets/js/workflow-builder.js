@@ -230,7 +230,7 @@
                     left: node.position.x + 'px',
                     top: node.position.y + 'px'
                 })
-                .html('<div class="wa-node-header" style="--node-bg-color: ' + node.color + '">' +
+                .html('<div class="wa-node-header">' +
                       '<span class="dashicons ' + node.icon + '"></span>' +
                       '<span class="wa-node-label">' + node.label + '</span>' +
                       '<button type="button" class="wa-node-delete" title="Delete node">&times;</button>' +

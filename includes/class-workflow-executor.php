@@ -73,7 +73,25 @@ class Workflow_Executor {
             require_once $nodes_dir . 'abstract-node.php';
         }
         
-        // Webhook nodes
+        // Trigger nodes
+        $trigger_nodes = array(
+            'manual_start' => 'class-manual-start-node.php',
+            'webhook_start' => 'class-webhook-start-node.php'
+        );
+        
+        foreach ($trigger_nodes as $type => $file) {
+            $path = $nodes_dir . 'webhook/' . $file;
+            if (file_exists($path)) {
+                require_once $path;
+                $class_name = 'WA_' . ucwords(str_replace('_', ' ', $type));
+                $class_name = str_replace(' ', '_', $class_name) . '_Node';
+                if (class_exists($class_name)) {
+                    $this->node_types[$type] = $class_name;
+                }
+            }
+        }
+        
+        // Legacy webhook node support
         if (file_exists($nodes_dir . 'webhook/class-webhook-start-node.php')) {
             require_once $nodes_dir . 'webhook/class-webhook-start-node.php';
             $this->node_types['webhook_start'] = 'WA_Webhook_Start_Node';

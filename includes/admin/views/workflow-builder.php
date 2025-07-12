@@ -709,3 +709,8 @@ var waWorkflowData = {
     availableNodes: <?php echo json_encode($available_nodes); ?>
 };
 </script>
+
+<?php
+// Include test modal for debugging
+include WA_PLUGIN_DIR . 'includes/admin/views/test-modal.php';
+?>
